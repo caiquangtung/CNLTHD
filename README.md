@@ -255,12 +255,27 @@ npm run test:watch
 
 **Mới vào dự án?** Đọc file này trước: [`doc/PROJECT_SUMMARY.md`](doc/PROJECT_SUMMARY.md) - Tóm tắt toàn bộ dự án
 
+**Team 4 người (Tùng, Hoàng-19, Hoàng-20, Khánh)?** Đọc: 
+- ⭐ [`FEATURE_ASSIGNMENT.md`](FEATURE_ASSIGNMENT.md) - Phân công chi tiết (25% mỗi người, tự test)
+- 🚀 [`QUICK_START.md`](QUICK_START.md) - Quick start 5 phút
+
+### 👥 Team Assignment (4 người: Tùng, Hoàng-19, Hoàng-20, Khánh)
+
+⭐ [`FEATURE_ASSIGNMENT.md`](FEATURE_ASSIGNMENT.md) - Complete feature assignment (25% each):
+- **Tùng**: Foundation + Auth + Reservations ⭐⭐⭐ CRITICAL
+- **Hoàng-19**: Events + Ticket Types
+- **Hoàng-20**: Orders + Payments + Admin ⭐⭐⭐ CRITICAL
+- **Khánh**: Tickets + Bookings API + Admin
+
+**Strategy**: Week 1-2 (Tùng SOLO) → Week 3-4 (ALL 4 core features) → MVP Complete!
+
+🚀 [`QUICK_START.md`](QUICK_START.md) - Setup & run trong 5 phút
+
 ### 📚 Complete Documentation
 
 ```
-📁 doc/
+📁 doc/ (7 technical documents)
 ├── 🎯 PROJECT_SUMMARY.md        ⭐ START HERE - Tổng quan toàn bộ dự án
-├── 📖 LỜI MỞ ĐẦU.md             Giới thiệu và mục tiêu
 ├── 🎓 KNOWLEDGE.md              Kiến thức NestJS cần học
 ├── 🏗️ DATABASE_SCHEMA.md        Chi tiết 8 tables + relationships
 ├── 🚀 DATABASE_OPTIMIZATION.md  Lộ trình 3 giai đoạn (MVP→Growth→Scale)
@@ -273,14 +288,15 @@ npm run test:watch
 
 **Cho người mới:**
 1. ⭐ [`PROJECT_SUMMARY.md`](doc/PROJECT_SUMMARY.md) - Overview nhanh 5 phút
-2. 📖 [`LỜI MỞ ĐẦU.md`](doc/LỜI%20MỞ%20ĐẦU.md) - Hiểu mục tiêu
-3. 🚀 [`DATABASE_OPTIMIZATION.md`](doc/DATABASE_OPTIMIZATION.md) - Hiểu kiến trúc
+2. 🚀 [`DATABASE_OPTIMIZATION.md`](doc/DATABASE_OPTIMIZATION.md) - Hiểu kiến trúc
+3. 🎯 [`TECHNICAL_DECISIONS.md`](doc/TECHNICAL_DECISIONS.md) - Tại sao như vậy
 
-**Cho developers:**
-1. 📅 [`IMPLEMENTATION_ROADMAP.md`](doc/IMPLEMENTATION_ROADMAP.md) - Làm gì từng tuần
-2. ⚡ [`NESTJS_CLI_GUIDE.md`](doc/NESTJS_CLI_GUIDE.md) - NestJS CLI commands
+**Cho developers (Team 4 người):**
+1. ⭐ [`FEATURE_ASSIGNMENT.md`](FEATURE_ASSIGNMENT.md) - Complete task assignment (25% mỗi người)
+2. 📅 [`IMPLEMENTATION_ROADMAP.md`](doc/IMPLEMENTATION_ROADMAP.md) - Làm gì từng tuần
 3. 🏗️ [`DATABASE_SCHEMA.md`](doc/DATABASE_SCHEMA.md) - Reference database
-4. 🎯 [`TECHNICAL_DECISIONS.md`](doc/TECHNICAL_DECISIONS.md) - Tại sao như vậy
+4. ⚡ [`NESTJS_CLI_GUIDE.md`](doc/NESTJS_CLI_GUIDE.md) - NestJS CLI commands
+5. 🎯 [`TECHNICAL_DECISIONS.md`](doc/TECHNICAL_DECISIONS.md) - Tại sao như vậy
 
 **Cho learners:**
 1. 🎓 [`KNOWLEDGE.md`](doc/KNOWLEDGE.md) - Học NestJS từ đầu
@@ -288,10 +304,12 @@ npm run test:watch
 
 ### 📊 Documentation Stats
 
-- **Total Files**: 8 documents
-- **Total Words**: ~55,000 words
-- **Coverage**: 100% (Architecture + Implementation + Decisions + CLI)
-- **Status**: ✅ Complete
+- **Total Files**: 10 documents (7 technical + 3 project)
+- **Total Words**: ~75,000+ words
+- **Coverage**: 100% (Architecture + Implementation + Team)
+- **Team**: 4 người (Tùng, Hoàng-19, Hoàng-20, Khánh)
+- **Strategy**: Balanced workload (25% mỗi người, tự test)
+- **Status**: ✅ Complete & Ready to Start
 
 ## 👨‍💻 Tác giả
 
