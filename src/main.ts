@@ -3,6 +3,11 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { TransformResponseInterceptor } from './common/interceptors';
+import {
+  HttpExceptionFilter,
+  AllExceptionsFilter,
+} from './common/filters';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -30,6 +35,15 @@ async function bootstrap() {
         enableImplicitConversion: true,
       },
     }),
+  );
+
+  // Global Response Transformer (wraps all responses in standard format)
+  app.useGlobalInterceptors(new TransformResponseInterceptor());
+
+  // Global Exception Filters (catches all errors and formats them)
+  app.useGlobalFilters(
+    new AllExceptionsFilter(), // Catch-all for unhandled errors
+    new HttpExceptionFilter(),  // HTTP exceptions
   );
   
   // Swagger Documentation
