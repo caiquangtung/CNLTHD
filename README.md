@@ -203,6 +203,22 @@ npm run start:dev
 
 ## 📚 API Documentation
 
+### API Response Format
+
+All API responses follow a **standardized format** for consistency:
+
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": null,
+  "statusCode": 200,
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "path": "/api/users/123"
+}
+```
+
+
 ### Authentication Endpoints
 ```http
 POST /auth/register
@@ -258,6 +274,8 @@ npm run test:watch
 **Team 4 người (Tùng, Hoàng-19, Hoàng-20, Khánh)?** Đọc: 
 - ⭐ [`FEATURE_ASSIGNMENT.md`](FEATURE_ASSIGNMENT.md) - Phân công chi tiết (25% mỗi người, tự test)
 - 🚀 [`QUICK_START.md`](QUICK_START.md) - Quick start 5 phút
+- 🗑️ [`SOFT_DELETE_GUIDE.md`](SOFT_DELETE_GUIDE.md) - Soft delete (BaseEntity)
+- 🔄 [`MIGRATION_GUIDE.md`](MIGRATION_GUIDE.md) - Auto-generate migrations
 
 ### 👥 Team Assignment (4 người: Tùng, Hoàng-19, Hoàng-20, Khánh)
 

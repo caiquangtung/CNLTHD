@@ -6,6 +6,8 @@ import configuration from './config/configuration';
 import { getDatabaseConfig } from './config/database.config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { UsersModule } from './modules/users/users.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -26,6 +28,10 @@ import { AppService } from './app.service';
     
     // Schedule Module - For cleanup jobs
     ScheduleModule.forRoot(),
+    
+    UsersModule,
+    
+    AuthModule,
     
     // Feature Modules (will add later)
     // UsersModule,
