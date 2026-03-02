@@ -61,7 +61,7 @@ export class UsersService {
     return this.usersRepo.save(user);
   }
 
-  /**
+  /**applyUpdateUserDtoToEntity
    * Soft delete a user (sets deletedAt timestamp)
    * User can be restored later
    */

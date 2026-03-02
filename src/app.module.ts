@@ -8,6 +8,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { TicketTypesModule } from './modules/ticket-types/ticket-types.module';
+import { EventsModule } from './modules/events/events.module';
 
 @Module({
   imports: [
@@ -17,22 +19,26 @@ import { AuthModule } from './modules/auth/auth.module';
       load: [configuration],
       envFilePath: '.env',
     }),
-    
+
     // TypeORM Module - Database connection
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => 
+      useFactory: (configService: ConfigService) =>
         getDatabaseConfig(configService),
       inject: [ConfigService],
     }),
-    
+
     // Schedule Module - For cleanup jobs
     ScheduleModule.forRoot(),
-    
+
     UsersModule,
-    
+
     AuthModule,
-    
+
+    TicketTypesModule,
+
+    EventsModule,
+
     // Feature Modules (will add later)
     // UsersModule,
     // AuthModule,
