@@ -1,0 +1,1802 @@
+{
+  "info": {
+    "_postman_id": "cnlthd-event-booking-system",
+    "name": "CNLTHD - Event Booking System",
+    "description": "Postman collection để test toàn bộ hệ thống Event Booking.\n\n## Hướng dẫn sử dụng\n1. Import file này và file `CNLTHD_Environment.postman_environment.json` vào Postman\n2. Chọn environment `CNLTHD - Local`\n3. Chạy **Auth / Login - Admin** trước (nếu đã có seed data) hoặc **Register** → nâng role → **Login Admin**\n4. Token JWT tự động lưu vào `adminAccessToken` sau khi login\n\n## Seed Data có sẵn (từ init.sql)\n| Email | Password | Role |\n|---|---|---|\n| admin@eventbooking.com | Admin1234 | admin |\n| le.van.organizer@gmail.com | Org1234 | organizer |\n| nguyen.thi.lan@gmail.com | User1234 | user |\n| tran.van.minh@gmail.com | User1234 | user |\n| pham.thi.hoa@gmail.com | User1234 | user |\n\n**Seed IDs cố định** (dùng trực tiếp trong requests):\n- `eventId` Tech Summit: `e0000000-0000-0000-0000-000000000001`\n- `ticketTypeId` Vé Tiêu Chuẩn: `c0000000-0000-0000-0000-000000000001`\n- `userId` Nguyễn Thị Lan: `a0000000-0000-0000-0000-000000000002`\n\n## Luồng test đề xuất\n1. Auth / Login - Admin → lấy adminAccessToken\n2. Test GET Events (Public) → kiểm tra seed data\n3. Tạo Event mới → lấy eventId\n4. Tạo TicketType → lấy ticketTypeId\n5. Test PATCH, DELETE, Restore",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT token — tự động set sau khi Login/Register"
+    },
+    {
+      "key": "adminAccessToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT token của admin — tự động set sau khi Login với tài khoản admin"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string",
+      "description": "UUID của user — tự động set sau Register/Login"
+    },
+    {
+      "key": "eventId",
+      "value": "",
+      "type": "string",
+      "description": "UUID của event — tự động set sau khi tạo Event"
+    },
+    {
+      "key": "ticketTypeId",
+      "value": "",
+      "type": "string",
+      "description": "UUID của ticket type — tự động set sau khi tạo TicketType"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "GET / - Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": ["{{baseUrl}}"]
+            },
+            "description": "Kiểm tra server đang hoạt động. Không yêu cầu auth."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is success', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "description": "Các endpoint xác thực — đăng ký và đăng nhập.\n\n**Lưu ý tạo tài khoản admin:** Sau khi register một user thường, vào DB chạy:\n```sql\nUPDATE users SET role = 'admin' WHERE email = 'admin@example.com';\n```\nSau đó login lại để lấy token admin.",
+      "item": [
+        {
+          "name": "POST /auth/register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"Password123\",\n  \"fullName\": \"Nguyen Van A\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Đăng ký tài khoản mới.\n\n**Validation:**\n- `email`: định dạng email hợp lệ\n- `password`: >= 8 ký tự, ít nhất 1 chữ cái và 1 số\n- `fullName`: >= 2 ký tự\n\nRole mặc định là `user`."
+          },
+          "response": [
+            {
+              "name": "201 - Đăng ký thành công",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"user\": {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"email\": \"user@example.com\",\n      \"fullName\": \"Nguyen Van A\",\n      \"role\": \"user\",\n      \"createdAt\": \"2026-03-07T00:00:00.000Z\",\n      \"updatedAt\": \"2026-03-07T00:00:00.000Z\"\n    }\n  },\n  \"message\": null,\n  \"statusCode\": 201,\n  \"timestamp\": \"2026-03-07T00:00:00.000Z\",\n  \"path\": \"/api/auth/register\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response shape is correct', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.data).to.have.property('accessToken');",
+                  "    pm.expect(body.data).to.have.property('user');",
+                  "});",
+                  "// Tự động lưu token và userId",
+                  "const data = pm.response.json().data;",
+                  "if (data && data.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', data.accessToken);",
+                  "    pm.collectionVariables.set('userId', data.user.id);",
+                  "    console.log('accessToken saved:', data.accessToken.substring(0, 20) + '...');",
+                  "    console.log('userId saved:', data.user.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/register - Admin (tạo để nâng role)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@eventbooking.com\",\n  \"password\": \"Admin1234\",\n  \"fullName\": \"Quản Trị Viên Hệ Thống\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Tạo tài khoản sẽ được nâng lên admin.\n\n**Nếu dùng seed data**: tài khoản `admin@eventbooking.com` đã có sẵn trong DB với role admin — dùng thẳng request 'POST /auth/login - Admin' (không cần register lại).\n\n**Nếu tạo mới**, sau khi chạy request này vào DB chạy:\n```sql\nUPDATE users SET role = 'admin' WHERE email = 'admin@eventbooking.com';\n```"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nguyen.thi.lan@gmail.com\",\n  \"password\": \"User1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Đăng nhập với tài khoản user từ seed data.\n\n**Seed accounts (role: user):**\n- `nguyen.thi.lan@gmail.com` / `User1234`\n- `tran.van.minh@gmail.com` / `User1234`\n- `pham.thi.hoa@gmail.com` / `User1234`\n\nToken sẽ tự động lưu vào biến `accessToken`."
+          },
+          "response": [
+            {
+              "name": "200 - Đăng nhập thành công",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"user\": {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"email\": \"user@example.com\",\n      \"fullName\": \"Nguyen Van A\",\n      \"role\": \"user\",\n      \"createdAt\": \"2026-03-07T00:00:00.000Z\",\n      \"updatedAt\": \"2026-03-07T00:00:00.000Z\"\n    }\n  },\n  \"message\": null,\n  \"statusCode\": 200,\n  \"timestamp\": \"2026-03-07T00:00:00.000Z\",\n  \"path\": \"/api/auth/login\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('accessToken exists', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data.accessToken).to.be.a('string');",
+                  "});",
+                  "const data = pm.response.json().data;",
+                  "if (data && data.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', data.accessToken);",
+                  "    pm.collectionVariables.set('userId', data.user.id);",
+                  "    console.log('accessToken saved');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/login - Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@eventbooking.com\",\n  \"password\": \"Admin1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Đăng nhập với tài khoản admin từ seed data.\n\n**Seed account:** `admin@eventbooking.com` / `Admin1234` (role: admin)\n\nToken admin sẽ tự động lưu vào `adminAccessToken` và `accessToken`."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json().data;",
+                  "if (data && data.accessToken) {",
+                  "    pm.collectionVariables.set('adminAccessToken', data.accessToken);",
+                  "    pm.collectionVariables.set('accessToken', data.accessToken);",
+                  "    console.log('Admin token saved. Role:', data.user.role);",
+                  "    if (data.user.role !== 'admin') {",
+                  "        console.warn('WARNING: User role is not admin! Run SQL to upgrade.');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/login - Organizer",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"le.van.organizer@gmail.com\",\n  \"password\": \"Org1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Đăng nhập với tài khoản organizer từ seed data.\n\n**Seed account:** `le.van.organizer@gmail.com` / `Org1234` (role: organizer)\n\nToken sẽ lưu vào `accessToken`."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json().data;",
+                  "if (data && data.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', data.accessToken);",
+                  "    pm.collectionVariables.set('userId', data.user.id);",
+                  "    console.log('Organizer token saved. Role:', data.user.role);",
+                  "    pm.test('Role is organizer', () => pm.expect(data.user.role).to.equal('organizer'));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/login - Sai mật khẩu (expect 401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nguyen.thi.lan@gmail.com\",\n  \"password\": \"WrongPassword99\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Test trường hợp sai mật khẩu — expect 401 Unauthorized."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401 Unauthorized', () => pm.response.to.have.status(401));",
+                  "pm.test('success is false', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/register - Validation lỗi (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"not-an-email\",\n  \"password\": \"123\",\n  \"fullName\": \"A\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Test validation pipe — email sai định dạng, password quá ngắn, fullName quá ngắn.\n\nExpect 400 Bad Request."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('success is false', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "description": "Quản lý người dùng.\n\n**Lưu ý:** Hiện tại các routes này chưa có guard — không yêu cầu JWT.",
+      "item": [
+        {
+          "name": "GET /users - Lấy tất cả users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            },
+            "description": "Lấy danh sách tất cả users. Không yêu cầu auth.\n\nTrả về mảng `UserResponseDto[]` (không có `passwordHash`)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Data is array', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.data).to.be.an('array');",
+                  "});",
+                  "pm.test('User has no passwordHash', () => {",
+                  "    const users = pm.response.json().data;",
+                  "    if (users.length > 0) {",
+                  "        pm.expect(users[0]).to.not.have.property('passwordHash');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /users/:id - Lấy user theo ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}"]
+            },
+            "description": "Lấy thông tin một user theo UUID.\n\nBiến `{{userId}}` được set tự động sau khi Register/Login."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('User data is correct', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.data).to.have.property('id');",
+                  "    pm.expect(body.data).to.have.property('email');",
+                  "    pm.expect(body.data).to.have.property('role');",
+                  "    pm.expect(body.data).to.not.have.property('passwordHash');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /users/:id - ID không tồn tại (expect 404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/00000000-0000-0000-0000-000000000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "00000000-0000-0000-0000-000000000000"]
+            },
+            "description": "Test với UUID hợp lệ nhưng không tồn tại trong DB.\n\nExpect 404 Not Found."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /users/:id - Cập nhật user",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Nguyen Van A Updated\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}"]
+            },
+            "description": "Cập nhật thông tin user. Tất cả fields đều optional.\n\nCó thể update: `email`, `password`, `fullName`."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Updated data returned', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.data.fullName).to.equal('Nguyen Van A Updated');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /users/:id - Đổi email và password",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"updated@example.com\",\n  \"password\": \"NewPassword456\",\n  \"fullName\": \"Updated Name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}"]
+            },
+            "description": "Cập nhật đầy đủ thông tin user."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /users/:id - Xóa user (soft delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}"]
+            },
+            "description": "Soft delete user — set `deletedAt` timestamp, không xóa khỏi DB.\n\nExpect 204 No Content."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 204 No Content', () => pm.response.to.have.status(204));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Events",
+      "description": "Quản lý sự kiện.\n\n**Auth:**\n- GET routes: Public (không cần token)\n- POST, PATCH, DELETE: cần JWT token với role `admin`\n\nSử dụng `{{adminAccessToken}}` cho các request yêu cầu admin.",
+      "item": [
+        {
+          "name": "POST /events - Tạo sự kiện mới",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tech Conference 2026\",\n  \"slug\": \"tech-conference-2026\",\n  \"description\": \"Hội nghị công nghệ lớn nhất năm 2026 tại Hà Nội\",\n  \"location\": \"Trung tâm Hội nghị Quốc gia, 57 Phạm Hùng, Hà Nội\",\n  \"startTime\": \"2026-06-15T08:00:00.000Z\",\n  \"endTime\": \"2026-06-15T18:00:00.000Z\",\n  \"status\": \"published\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["events"]
+            },
+            "description": "Tạo sự kiện mới. **Yêu cầu đăng nhập** (mọi role đều được).\n\nUser tạo event sẽ tự động trở thành **organizer** của event đó.\n\n**Validation:**\n- `name`: 2-200 ký tự\n- `slug`: 2-200 ký tự, phải unique\n- `description`: >= 1 ký tự\n- `location`: 2-500 ký tự\n- `startTime`, `endTime`: ISO date string\n- `status` (optional): `draft` | `published` | `cancelled` (mặc định `draft`)\n\n**Response bao gồm:**\n- `organizerId`: UUID của người tạo\n- `organizer`: `{ id, email, fullName }` của người tạo"
+          },
+          "response": [
+            {
+              "name": "201 - Tạo thành công",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440001\",\n    \"slug\": \"tech-conference-2026\",\n    \"name\": \"Tech Conference 2026\",\n    \"description\": \"Hội nghị công nghệ lớn nhất năm 2026 tại Hà Nội\",\n    \"location\": \"Trung tâm Hội nghị Quốc gia, 57 Phạm Hùng, Hà Nội\",\n    \"startTime\": \"2026-06-15T08:00:00.000Z\",\n    \"endTime\": \"2026-06-15T18:00:00.000Z\",\n    \"status\": \"published\",\n    \"createdAt\": \"2026-03-07T00:00:00.000Z\",\n    \"updatedAt\": \"2026-03-07T00:00:00.000Z\"\n  },\n  \"message\": null,\n  \"statusCode\": 201\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Event created with correct fields', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.data).to.have.property('id');",
+                  "    pm.expect(body.data).to.have.property('slug');",
+                  "    pm.expect(body.data.name).to.equal('Tech Conference 2026');",
+                  "});",
+                  "const data = pm.response.json().data;",
+                  "if (data && data.id) {",
+                  "    pm.collectionVariables.set('eventId', data.id);",
+                  "    console.log('eventId saved:', data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /events - Tạo event dạng draft",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Workshop NodeJS 2026\",\n  \"slug\": \"workshop-nodejs-2026\",\n  \"description\": \"Workshop về NodeJS và NestJS\",\n  \"location\": \"FPT Polytechnic Hà Nội\",\n  \"startTime\": \"2026-07-20T09:00:00.000Z\",\n  \"endTime\": \"2026-07-20T12:00:00.000Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["events"]
+            },
+            "description": "Tạo event không có status — mặc định là `draft`."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Default status is draft', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data.status).to.equal('draft');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /events - Organizer tạo event (trở thành organizer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Hội Chợ Khởi Nghiệp 2026\",\n  \"slug\": \"hoi-cho-khoi-nghiep-2026\",\n  \"description\": \"Sự kiện kết nối startup và nhà đầu tư\",\n  \"location\": \"Hà Nội, Việt Nam\",\n  \"startTime\": \"2026-11-15T08:00:00.000Z\",\n  \"endTime\": \"2026-11-15T18:00:00.000Z\",\n  \"status\": \"draft\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["events"]
+            },
+            "description": "Organizer tạo event → tự động trở thành organizer của event.\n\nDùng token organizer (`le.van.organizer@gmail.com`) — lấy từ 'Login - Organizer'."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('organizerId = organizer user id', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data.organizer.email).to.equal('le.van.organizer@gmail.com');",
+                  "});",
+                  "const data = pm.response.json().data;",
+                  "if (data && data.id) {",
+                  "    pm.collectionVariables.set('eventId', data.id);",
+                  "    console.log('eventId saved (organizer-created):', data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /events - User thường tạo event (trở thành organizer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Workshop Python Cơ Bản\",\n  \"slug\": \"workshop-python-co-ban-2026\",\n  \"description\": \"Workshop Python dành cho người mới bắt đầu\",\n  \"location\": \"Online - Google Meet\",\n  \"startTime\": \"2026-09-10T09:00:00.000Z\",\n  \"endTime\": \"2026-09-10T12:00:00.000Z\",\n  \"status\": \"draft\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["events"]
+            },
+            "description": "User thường (không phải admin) tạo event → tự động trở thành organizer.\n\nResponse sẽ có `organizerId` = id của user đang đăng nhập.\n\nDùng `{{accessToken}}` (token user thường từ Login)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('organizerId equals current user', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data).to.have.property('organizerId');",
+                  "    pm.expect(body.data.organizer).to.have.property('id');",
+                  "    pm.expect(body.data.organizer).to.have.property('email');",
+                  "    pm.expect(body.data.organizer).to.have.property('fullName');",
+                  "});",
+                  "const data = pm.response.json().data;",
+                  "if (data && data.id) {",
+                  "    pm.collectionVariables.set('eventId', data.id);",
+                  "    console.log('eventId saved (user-created):', data.id);",
+                  "    console.log('organizer:', data.organizer?.email);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /events - Không có token (expect 401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Event\",\n  \"slug\": \"test-event\",\n  \"description\": \"Description\",\n  \"location\": \"Location\",\n  \"startTime\": \"2026-06-01T08:00:00.000Z\",\n  \"endTime\": \"2026-06-01T10:00:00.000Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["events"]
+            },
+            "description": "Test bảo mật — không gửi token.\n\nExpect 401 Unauthorized."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401 when no token', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /events/:id - User không phải organizer (expect 403)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tên Sự Kiện Bị Đổi Trái Phép\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/events/e0000000-0000-0000-0000-000000000001",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "e0000000-0000-0000-0000-000000000001"]
+            },
+            "description": "Test ownership guard — dùng token của user thường cố sửa event của người khác.\n\nEvent `e0000000-...001` do admin tạo (organizer_id = admin). User thường không phải organizer → 403 Forbidden."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 403 when not organizer or admin', () => pm.response.to.have.status(403));",
+                  "pm.test('Error message mentions organizer', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /events - Lấy tất cả events (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["events"]
+            },
+            "description": "Lấy danh sách tất cả events. Không yêu cầu auth."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Data is array', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.data).to.be.an('array');",
+                  "});",
+                  "// Lưu eventId từ phần tử đầu tiên nếu chưa có",
+                  "const events = pm.response.json().data;",
+                  "if (events && events.length > 0 && !pm.collectionVariables.get('eventId')) {",
+                  "    pm.collectionVariables.set('eventId', events[0].id);",
+                  "    console.log('eventId saved from list:', events[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /events/deleted - Lấy events đã xóa (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/events/deleted",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "deleted"]
+            },
+            "description": "Lấy danh sách events đã bị soft delete. **Yêu cầu role admin.**"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Data is array', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /events/:id - Lấy event theo ID (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/events/{{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "{{eventId}}"]
+            },
+            "description": "Lấy chi tiết một event theo UUID. Không yêu cầu auth."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Event has required fields', () => {",
+                  "    const body = pm.response.json();",
+                  "    const event = body.data;",
+                  "    pm.expect(event).to.have.property('id');",
+                  "    pm.expect(event).to.have.property('name');",
+                  "    pm.expect(event).to.have.property('slug');",
+                  "    pm.expect(event).to.have.property('status');",
+                  "    pm.expect(event).to.have.property('startTime');",
+                  "    pm.expect(event).to.have.property('endTime');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /events/:id - ID không tồn tại (expect 404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/events/00000000-0000-0000-0000-000000000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "00000000-0000-0000-0000-000000000000"]
+            },
+            "description": "Expect 404 Not Found."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /events/:id - Cập nhật event",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tech Conference 2026 - Updated\",\n  \"status\": \"published\",\n  \"description\": \"Mô tả đã được cập nhật\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/events/{{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "{{eventId}}"]
+            },
+            "description": "Cập nhật thông tin event. **Yêu cầu role admin.**\n\nTất cả fields đều optional."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Updated fields are reflected', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data.name).to.equal('Tech Conference 2026 - Updated');",
+                  "    pm.expect(body.data.status).to.equal('published');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /events/:id - Đổi status sang cancelled",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"cancelled\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/events/{{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "{{eventId}}"]
+            },
+            "description": "Hủy sự kiện bằng cách đổi status sang `cancelled`."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status is cancelled', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data.status).to.equal('cancelled');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /events/:id - Xóa event (soft delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/events/{{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "{{eventId}}"]
+            },
+            "description": "Soft delete event. **Yêu cầu role admin.**\n\nExpect 204 No Content."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 204', () => pm.response.to.have.status(204));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /events/:id/restore - Khôi phục event đã xóa",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/events/{{eventId}}/restore",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "{{eventId}}", "restore"]
+            },
+            "description": "Khôi phục event đã bị soft delete. **Yêu cầu role admin.**\n\nChạy sau khi DELETE để khôi phục lại."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Event is restored', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Ticket Types",
+      "description": "Quản lý loại vé cho sự kiện.\n\n**Auth:**\n- GET routes: Public\n- POST, PATCH, DELETE: cần JWT token với role `admin`\n\n**Lưu ý:** Cần có `eventId` hợp lệ trước khi tạo ticket type. Biến `{{eventId}}` được set tự động sau khi tạo Event.",
+      "item": [
+        {
+          "name": "POST /ticket-types - Tạo loại vé",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"name\": \"Vé Thường\",\n  \"description\": \"Vé vào cửa thường, chỗ ngồi tự do\",\n  \"price\": 299000,\n  \"quantity\": 500,\n  \"maxPerOrder\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ticket-types",
+              "host": ["{{baseUrl}}"],
+              "path": ["ticket-types"]
+            },
+            "description": "Tạo loại vé cho một event. **Yêu cầu role admin.**\n\n**Validation:**\n- `eventId`: UUID hợp lệ, event phải tồn tại\n- `name`: 2-100 ký tự\n- `description`: >= 1 ký tự\n- `price`: số dương, tối đa 2 chữ số thập phân\n- `quantity`: số nguyên >= 1\n- `maxPerOrder` (optional): số nguyên >= 1, mặc định 10"
+          },
+          "response": [
+            {
+              "name": "201 - Tạo thành công",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440002\",\n    \"eventId\": \"550e8400-e29b-41d4-a716-446655440001\",\n    \"name\": \"Vé Thường\",\n    \"description\": \"Vé vào cửa thường, chỗ ngồi tự do\",\n    \"price\": 299000,\n    \"quantity\": 500,\n    \"maxPerOrder\": 5\n  },\n  \"message\": null,\n  \"statusCode\": 201\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('TicketType created correctly', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.data).to.have.property('id');",
+                  "    pm.expect(body.data.price).to.equal(299000);",
+                  "    pm.expect(body.data.quantity).to.equal(500);",
+                  "});",
+                  "const data = pm.response.json().data;",
+                  "if (data && data.id) {",
+                  "    pm.collectionVariables.set('ticketTypeId', data.id);",
+                  "    console.log('ticketTypeId saved:', data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /ticket-types - Tạo vé VIP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"name\": \"Vé VIP\",\n  \"description\": \"Vé VIP - chỗ ngồi hàng đầu, bao gồm bữa tối\",\n  \"price\": 1500000,\n  \"quantity\": 50,\n  \"maxPerOrder\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ticket-types",
+              "host": ["{{baseUrl}}"],
+              "path": ["ticket-types"]
+            },
+            "description": "Tạo loại vé VIP cho event."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /ticket-types - Validation lỗi (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventId\": \"not-a-uuid\",\n  \"name\": \"A\",\n  \"description\": \"\",\n  \"price\": -100,\n  \"quantity\": 0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ticket-types",
+              "host": ["{{baseUrl}}"],
+              "path": ["ticket-types"]
+            },
+            "description": "Test validation: eventId không phải UUID, name quá ngắn, description rỗng, price âm, quantity = 0.\n\nExpect 400 Bad Request."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /ticket-types - Lấy tất cả loại vé (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ticket-types",
+              "host": ["{{baseUrl}}"],
+              "path": ["ticket-types"]
+            },
+            "description": "Lấy tất cả loại vé. Không yêu cầu auth."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Data is array', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /ticket-types/deleted - Lấy loại vé đã xóa (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ticket-types/deleted",
+              "host": ["{{baseUrl}}"],
+              "path": ["ticket-types", "deleted"]
+            },
+            "description": "Lấy danh sách loại vé đã bị soft delete. **Yêu cầu role admin.**"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /ticket-types/event/:eventId - Lấy vé theo event (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ticket-types/event/{{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ticket-types", "event", "{{eventId}}"]
+            },
+            "description": "Lấy tất cả loại vé của một event cụ thể. Không yêu cầu auth."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns ticket types for the event', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data).to.be.an('array');",
+                  "    if (body.data.length > 0) {",
+                  "        pm.expect(body.data[0].eventId).to.equal(pm.collectionVariables.get('eventId'));",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /ticket-types/:id - Lấy loại vé theo ID (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ticket-types/{{ticketTypeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ticket-types", "{{ticketTypeId}}"]
+            },
+            "description": "Lấy chi tiết một loại vé theo UUID. Không yêu cầu auth."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TicketType has required fields', () => {",
+                  "    const body = pm.response.json();",
+                  "    const tt = body.data;",
+                  "    pm.expect(tt).to.have.property('id');",
+                  "    pm.expect(tt).to.have.property('name');",
+                  "    pm.expect(tt).to.have.property('price');",
+                  "    pm.expect(tt).to.have.property('quantity');",
+                  "    pm.expect(tt).to.have.property('maxPerOrder');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /ticket-types/:id - Cập nhật loại vé",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 350000,\n  \"quantity\": 600,\n  \"maxPerOrder\": 8,\n  \"description\": \"Vé vào cửa thường - đã cập nhật giá\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ticket-types/{{ticketTypeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ticket-types", "{{ticketTypeId}}"]
+            },
+            "description": "Cập nhật thông tin loại vé. **Yêu cầu role admin.**\n\nTất cả fields đều optional."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Price updated', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data.price).to.equal(350000);",
+                  "    pm.expect(body.data.quantity).to.equal(600);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /ticket-types/:id - Xóa loại vé (soft delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ticket-types/{{ticketTypeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ticket-types", "{{ticketTypeId}}"]
+            },
+            "description": "Soft delete loại vé. **Yêu cầu role admin.**\n\nExpect 204 No Content."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 204', () => pm.response.to.have.status(204));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /ticket-types/:id/restore - Khôi phục loại vé",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ticket-types/{{ticketTypeId}}/restore",
+              "host": ["{{baseUrl}}"],
+              "path": ["ticket-types", "{{ticketTypeId}}", "restore"]
+            },
+            "description": "Khôi phục loại vé đã bị soft delete. **Yêu cầu role admin.**\n\nChạy sau request DELETE."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TicketType restored', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "[Flow] End-to-End Test",
+      "description": "Luồng test đầy đủ từ đầu đến cuối. Chạy theo thứ tự các request trong folder này.\n\n**Thứ tự chạy:**\n1. Register user thường\n2. Register admin (sau đó nâng role trong DB)\n3. Login admin → lấy adminAccessToken\n4. Tạo Event\n5. Tạo 2 loại vé cho Event đó\n6. Xem danh sách Events (Public)\n7. Xem vé theo event (Public)\n8. Update event\n9. Delete ticket type → Restore\n10. Delete event → Restore",
+      "item": [
+        {
+          "name": "1. Register user thường",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser_{{$timestamp}}@example.com\",\n  \"password\": \"TestUser123\",\n  \"fullName\": \"Test User\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Register: Status 201', () => pm.response.to.have.status(201));",
+                  "const data = pm.response.json().data;",
+                  "pm.collectionVariables.set('accessToken', data.accessToken);",
+                  "pm.collectionVariables.set('userId', data.user.id);",
+                  "console.log('[E2E] Step 1: User registered:', data.user.email);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Login Admin (cần nâng role trước)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"Admin1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login Admin: Status 200', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json().data;",
+                  "pm.collectionVariables.set('adminAccessToken', data.accessToken);",
+                  "console.log('[E2E] Step 2: Admin logged in, role:', data.user.role);",
+                  "pm.test('User is admin', () => {",
+                  "    pm.expect(data.user.role).to.equal('admin');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Tạo Event",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"E2E Test Event {{$timestamp}}\",\n  \"slug\": \"e2e-test-event-{{$timestamp}}\",\n  \"description\": \"Event được tạo trong luồng E2E test\",\n  \"location\": \"Hà Nội, Việt Nam\",\n  \"startTime\": \"2026-12-01T08:00:00.000Z\",\n  \"endTime\": \"2026-12-01T18:00:00.000Z\",\n  \"status\": \"published\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["events"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Create Event: Status 201', () => pm.response.to.have.status(201));",
+                  "const data = pm.response.json().data;",
+                  "pm.collectionVariables.set('eventId', data.id);",
+                  "console.log('[E2E] Step 3: Event created:', data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Tạo Vé Thường",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"name\": \"Vé Thường\",\n  \"description\": \"Vé vào cửa thường\",\n  \"price\": 200000,\n  \"quantity\": 300,\n  \"maxPerOrder\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ticket-types",
+              "host": ["{{baseUrl}}"],
+              "path": ["ticket-types"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Create Ticket Normal: Status 201', () => pm.response.to.have.status(201));",
+                  "const data = pm.response.json().data;",
+                  "pm.collectionVariables.set('ticketTypeId', data.id);",
+                  "console.log('[E2E] Step 4: Normal ticket type created:', data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. Tạo Vé VIP",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"name\": \"Vé VIP\",\n  \"description\": \"Vé VIP với nhiều đặc quyền\",\n  \"price\": 800000,\n  \"quantity\": 50,\n  \"maxPerOrder\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ticket-types",
+              "host": ["{{baseUrl}}"],
+              "path": ["ticket-types"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Create Ticket VIP: Status 201', () => pm.response.to.have.status(201));",
+                  "console.log('[E2E] Step 5: VIP ticket type created');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "6. Xem Event theo ID (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/events/{{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "{{eventId}}"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get Event: Status 200', () => pm.response.to.have.status(200));",
+                  "console.log('[E2E] Step 6: Event retrieved successfully');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "7. Xem vé theo Event (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ticket-types/event/{{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ticket-types", "event", "{{eventId}}"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get Tickets by Event: Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('2 ticket types exist', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data.length).to.be.at.least(2);",
+                  "});",
+                  "console.log('[E2E] Step 7: Found', pm.response.json().data.length, 'ticket types');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "8. Update Event (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"E2E Test Event - UPDATED\",\n  \"status\": \"published\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/events/{{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "{{eventId}}"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Update Event: Status 200', () => pm.response.to.have.status(200));",
+                  "console.log('[E2E] Step 8: Event updated');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "9. Delete TicketType → Xem trong deleted list",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ticket-types/{{ticketTypeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ticket-types", "{{ticketTypeId}}"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Delete TicketType: Status 204', () => pm.response.to.have.status(204));",
+                  "console.log('[E2E] Step 9: TicketType soft deleted');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "10. Restore TicketType",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ticket-types/{{ticketTypeId}}/restore",
+              "host": ["{{baseUrl}}"],
+              "path": ["ticket-types", "{{ticketTypeId}}", "restore"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Restore TicketType: Status 200', () => pm.response.to.have.status(200));",
+                  "console.log('[E2E] Step 10: TicketType restored. E2E flow completed!');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
