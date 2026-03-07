@@ -1,6 +1,7 @@
-import { Entity, Column, Index, OneToMany } from 'typeorm';
+import { Entity, Column, Index, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../../common/entities';
 import { TicketType } from '../../ticket-types/entities/ticket-type.entity';
+import { User } from '../../users/entities/user.entity';
 
 export enum EventStatus {
   DRAFT = 'draft',
@@ -38,7 +39,15 @@ export class Event extends BaseEntity {
   })
   status: EventStatus;
 
+  @Index('idx_events_organizer_id')
+  @Column({ name: 'organizer_id', nullable: true })
+  organizerId: string | null;
+
   // Relationships
+  @ManyToOne(() => User, { nullable: true, eager: false })
+  @JoinColumn({ name: 'organizer_id' })
+  organizer: User;
+
   @OneToMany(() => TicketType, (ticketType) => ticketType.event)
   ticketTypes: TicketType[];
 }
