@@ -1,28 +1,35 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
+import { IPaymentGateway, VerifyCallbackResult } from './payment-gateway.interface';
 
 @Injectable()
-export class VnpayService {
+export class VnpayGateway implements IPaymentGateway {
     private readonly tmnCode: string;
     private readonly hashSecret: string;
     private readonly vnpUrl: string;
     private readonly returnUrl: string;
+    private readonly paymentTimeout: number; // minutes
+    private readonly logger = new Logger(VnpayGateway.name);
 
     constructor(private configService: ConfigService) {
         this.tmnCode = this.configService.get<string>('vnpay.tmnCode');
         this.hashSecret = this.configService.get<string>('vnpay.hashSecret');
         this.vnpUrl = this.configService.get<string>('vnpay.url');
         this.returnUrl = this.configService.get<string>('vnpay.returnUrl');
+        this.paymentTimeout = this.configService.get<number>('payment.timeout') || 5;
+
+        this.logger.log(`VNPay Config - TMN Code: ${this.tmnCode}, Payment Timeout: ${this.paymentTimeout}min`);
     }
 
     /**
      * Tạo URL thanh toán VNPay
+     * Returns Promise for consistency with other gateways like Momo
      */
-    buildPaymentUrl(orderId: string, amount: number, orderInfo: string, ipAddr: string): string {
+    buildPaymentUrl(orderId: string, amount: number, orderInfo: string, ipAddr: string): Promise<string> {
         const now = new Date();
         const createDate = this.formatDate(now);
-        const expireDate = this.formatDate(new Date(now.getTime() + 5 * 60 * 1000));
+        const expireDate = this.formatDate(new Date(now.getTime() + this.paymentTimeout * 60 * 1000));
 
         const vnpParams: Record<string, string | number> = {
             vnp_Version: '2.1.0',
@@ -51,21 +58,30 @@ export class VnpayService {
         }
         const signData = queryParts.join('&');
 
+        this.logger.debug(`Sign Data: ${signData}`);
+        this.logger.debug(`Hash Secret: ${this.hashSecret}`);
+
         const hmac = crypto
             .createHmac('sha512', this.hashSecret)
             .update(Buffer.from(signData, 'utf-8'))
             .digest('hex');
 
-        return `${this.vnpUrl}?${signData}&vnp_SecureHash=${hmac}`;
+        this.logger.debug(`Generated HMAC: ${hmac}`);
+
+        const paymentUrl = `${this.vnpUrl}?${signData}&vnp_SecureHash=${hmac}`;
+        this.logger.log(`Payment URL created for order ${orderId}: ${paymentUrl}`);
+
+        return Promise.resolve(paymentUrl);
     }
 
     /**
      * Verify callback từ VNPay (kiểm tra chữ ký)
      */
-    verifyReturnUrl(query: Record<string, string>): { isValid: boolean; isSuccess: boolean; orderId: string; transactionId: string } {
+    verifyCallback(query: Record<string, string>): VerifyCallbackResult {
         const vnpSecureHash = query['vnp_SecureHash'];
         const orderId = query['vnp_TxnRef'] || '';
         const transactionId = query['vnp_TransactionNo'] || '';
+        const amount = query['vnp_Amount'] ? Number(query['vnp_Amount']) / 100 : undefined;
 
         // Xóa hash ra khỏi params để verify
         const params = { ...query };
@@ -90,7 +106,7 @@ export class VnpayService {
         const isValid = vnpSecureHash === hmac;
         const isSuccess = isValid && query['vnp_ResponseCode'] === '00';
 
-        return { isValid, isSuccess, orderId, transactionId };
+        return { isValid, isSuccess, orderId, transactionId, amount };
     }
 
     private formatDate(date: Date): string {
