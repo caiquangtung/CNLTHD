@@ -4,7 +4,10 @@ import { CreateEventDto } from '../dto/create-event.dto';
 import { UpdateEventDto } from '../dto/update-event.dto';
 import { EventResponseDto } from '../dto/event-response.dto';
 
-export function mapCreateEventDtoToEntity(dto: CreateEventDto): Event {
+export function mapCreateEventDtoToEntity(
+  dto: CreateEventDto,
+  organizerId: string,
+): Event {
   const event = new Event();
   event.name = dto.name;
   event.slug = dto.slug;
@@ -12,6 +15,7 @@ export function mapCreateEventDtoToEntity(dto: CreateEventDto): Event {
   event.location = dto.location;
   event.startTime = new Date(dto.startTime);
   event.endTime = new Date(dto.endTime);
+  event.organizerId = organizerId;
   if (dto.status !== undefined) {
     event.status = dto.status;
   }

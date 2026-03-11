@@ -22,9 +22,9 @@ export const getDatabaseConfig = (
 
   // Connection Pool (theo DATABASE_OPTIMIZATION.md)
   extra: {
-    max: 20,                      // Maximum connections
-    min: 5,                       // Minimum connections
-    idleTimeoutMillis: 30000,     // 30 seconds
+    max: 20, // Maximum connections
+    min: 5, // Minimum connections
+    idleTimeoutMillis: 30000, // 30 seconds
     connectionTimeoutMillis: 2000, // 2 seconds
     // Set timezone cho mỗi connection
     options: '-c timezone=Asia/Ho_Chi_Minh',

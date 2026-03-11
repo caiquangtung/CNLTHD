@@ -1,4 +1,11 @@
-import { Entity, Column, Index, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  Index,
+  OneToMany,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { BaseEntity } from '../../../common/entities';
 import { TicketType } from '../../ticket-types/entities/ticket-type.entity';
 import { User } from '../../users/entities/user.entity';
@@ -44,7 +51,11 @@ export class Event extends BaseEntity {
   organizerId: string | null;
 
   // Relationships
-  @ManyToOne(() => User, { nullable: true, eager: false })
+  @ManyToOne(() => User, (user) => user.createdEvents, {
+    nullable: true,
+    eager: false,
+    onDelete: 'SET NULL',
+  })
   @JoinColumn({ name: 'organizer_id' })
   organizer: User;
 
