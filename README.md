@@ -358,3 +358,5 @@ Dự án được phát triển như một phần của bài tập thực hành 
 ⭐ **Lưu ý:** Dự án tập trung vào việc nghiên cứu và áp dụng các tính năng core của NestJS Framework.
 
 **Happy coding! 🚀**
+
+docker-compose down -v && docker-compose up -d postgres && timeout /t 10 && npm run migration:run

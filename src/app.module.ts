@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import configuration from './config/configuration';
 import vnpayConfig from './config/vnpay.config';
+import momoConfig from './config/momo.config';
 import { getDatabaseConfig } from './config/database.config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -14,13 +15,14 @@ import { EventsModule } from './modules/events/events.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { OrderCronService } from './cron/order-cron.service';
+import { TimezoneInterceptor } from './common/interceptors/timezone.interceptor';
 
 @Module({
   imports: [
     // Config Module - Global configuration
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [configuration, vnpayConfig],
+      load: [configuration, vnpayConfig, momoConfig],
       envFilePath: '.env',
     }),
 
@@ -43,6 +45,9 @@ import { OrderCronService } from './cron/order-cron.service';
     PaymentsModule,
   ],
   controllers: [AppController],
-  providers: [AppService, OrderCronService],
+  providers: [
+    AppService,
+    OrderCronService,
+  ],
 })
 export class AppModule { }
