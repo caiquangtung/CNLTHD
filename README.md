@@ -31,11 +31,11 @@ Dự án này là hệ thống backend đặt vé sự kiện được xây dự
 
 Dự án được phát triển theo 3 giai đoạn:
 
-| Giai Đoạn | Stack | Target Users | Status |
-|-----------|-------|--------------|--------|
-| **1. MVP** | NestJS + PostgreSQL | 500-1,000 | ⭐ **Đang triển khai** |
-| **2. Growth** | + Redis | 1,000-10,000 | 🔮 Future |
-| **3. Scale** | + Queue + Infrastructure | 10,000+ | 🔮 Future |
+| Giai Đoạn     | Stack                    | Target Users | Status                 |
+| ------------- | ------------------------ | ------------ | ---------------------- |
+| **1. MVP**    | NestJS + PostgreSQL      | 500-1,000    | ⭐ **Đang triển khai** |
+| **2. Growth** | + Redis                  | 1,000-10,000 | 🔮 Future              |
+| **3. Scale**  | + Queue + Infrastructure | 10,000+      | 🔮 Future              |
 
 > **Hiện tại**: Tập trung triển khai Giai đoạn 1 với NestJS + PostgreSQL thuần
 
@@ -159,6 +159,13 @@ docker-compose logs postgres
 ```bash
 npm install
 
+# Chạy migrations (tạo bảng + seed data)
+npm run migration:run
+```
+
+#### 5. Khởi động ứng dụng
+
+```bash
 # Development mode
 npm run start:dev
 
@@ -168,6 +175,15 @@ npm run start:prod
 ```
 
 Server sẽ chạy tại: `http://localhost:3000`
+
+#### Reset toàn bộ database
+
+```bash
+docker compose down
+docker volume rm cnlthd_postgres_data
+docker compose up -d postgres
+npm run migration:run
+```
 
 ### Phương pháp 2: Cài đặt thủ công
 

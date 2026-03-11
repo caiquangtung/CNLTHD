@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import configuration from './config/configuration';
+import vnpayConfig from './config/vnpay.config';
 import { getDatabaseConfig } from './config/database.config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -10,13 +11,16 @@ import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { TicketTypesModule } from './modules/ticket-types/ticket-types.module';
 import { EventsModule } from './modules/events/events.module';
+import { OrdersModule } from './modules/orders/orders.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+import { OrderCronService } from './cron/order-cron.service';
 
 @Module({
   imports: [
     // Config Module - Global configuration
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [configuration],
+      load: [configuration, vnpayConfig],
       envFilePath: '.env',
     }),
 
@@ -32,23 +36,13 @@ import { EventsModule } from './modules/events/events.module';
     ScheduleModule.forRoot(),
 
     UsersModule,
-
     AuthModule,
-
     TicketTypesModule,
-
     EventsModule,
-
-    // Feature Modules (will add later)
-    // UsersModule,
-    // AuthModule,
-    // EventsModule,
-    // BookingsModule,
-    // OrdersModule,
-    // PaymentsModule,
-    // TicketsModule,
+    OrdersModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, OrderCronService],
 })
-export class AppModule {}
+export class AppModule { }

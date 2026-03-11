@@ -15,8 +15,8 @@ export const getDatabaseConfig = (
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
 
   // Synchronize: CHỈ dùng trong development
-  synchronize: configService.get<string>('nodeEnv') === 'development',
-
+  synchronize: configService.get<boolean>('database.synchronize') ?? false,
+  
   // Logging
   logging: configService.get<string>('nodeEnv') === 'development',
 
