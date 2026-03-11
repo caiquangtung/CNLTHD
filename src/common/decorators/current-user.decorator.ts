@@ -1,8 +1,16 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 
 export const CurrentUser = createParamDecorator(
-  (data: unknown, ctx: ExecutionContext) => {
+  (data: string | undefined, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest();
-    return request.user; // Set by JwtStrategy
+    const user = request.user;
+
+    // If data specified (e.g., @CurrentUser('id')), return that field
+    if (data) {
+      return user?.[data];
+    }
+
+    // Otherwise return entire user object
+    return user;
   },
 );

@@ -23,6 +23,10 @@ export default () => ({
     origin: process.env.CORS_ORIGIN?.split(',') || '*',
   },
 
+  payment: {
+    timeout: parseInt(process.env.PAYMENT_TIMEOUT || '5', 10), // minutes
+  },
+
   swagger: {
     enabled: process.env.API_DOCS_ENABLED === 'true',
     path: process.env.API_DOCS_PATH || 'api/docs',

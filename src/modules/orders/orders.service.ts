@@ -6,6 +6,7 @@ import {
     Logger,
     Inject,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, LessThan, EntityManager } from 'typeorm';
 import { Order, OrderStatus } from './entities/order.entity';
@@ -18,15 +19,15 @@ import {
 } from './mappers/order.mapper';
 import { TicketType } from '../ticket-types/entities';
 import { Payment, PaymentStatus } from '../payments/entities';
-import { VnpayService } from '../payments/vnpay.service';
+import { PaymentGatewayFactory } from '../payments/gateways/payment-gateway.factory';
 import { OrderResponseDto } from './dto';
 
 const MAX_PENDING_ORDERS = 2;
-const PAYMENT_DEADLINE_MINUTES = 5;
 
 @Injectable()
 export class OrdersService {
     private readonly logger = new Logger(OrdersService.name);
+    private readonly paymentDeadlineMinutes: number;
 
     constructor(
         @InjectRepository(Order)
@@ -34,8 +35,11 @@ export class OrdersService {
         @InjectRepository(OrderItem)
         private orderItemsRepo: Repository<OrderItem>,
         @InjectDataSource() private dataSource: DataSource,
-        @Inject(VnpayService) private vnpayService: VnpayService,
-    ) { }
+        private paymentGatewayFactory: PaymentGatewayFactory,
+        private configService: ConfigService,
+    ) {
+        this.paymentDeadlineMinutes = this.configService.get<number>('payment.timeout') || 5;
+    }
 
     async create(dto: CreateOrderDto, userId: string, ipAddr?: string): Promise<OrderResponseDto> {
         return await this.dataSource.transaction(async (manager) => {
@@ -53,7 +57,7 @@ export class OrdersService {
             const order = mapCreateOrderDtoToEntity(dto);
             order.userId = userId;
             order.status = OrderStatus.PENDING;
-            order.paymentDeadline = new Date(Date.now() + PAYMENT_DEADLINE_MINUTES * 60 * 1000);
+            order.paymentDeadline = new Date(Date.now() + this.paymentDeadlineMinutes * 60 * 1000);
 
             let totalAmount = 0;
 
@@ -69,6 +73,10 @@ export class OrdersService {
                 // Kiểm tra số lượng còn lại
                 if (ticketType.quantity < item.quantity) {
                     throw new BadRequestException(`Vé ${ticketType.name} không đủ số lượng (còn ${ticketType.quantity})`);
+                }
+
+                if (item.quantity > ticketType.maxPerOrder) {
+                    throw new BadRequestException(`Vé ${ticketType.name} chỉ được mua tối đa ${ticketType.maxPerOrder} vé mỗi đơn hàng`);
                 }
 
                 // Trừ kho
@@ -93,11 +101,12 @@ export class OrdersService {
             // 2. Map từ savedOrder (đã có ID từ DB)
             const responseDto = mapOrderToResponseDto(savedOrder);
 
-            // 3. Gắn Payment URL
-            responseDto.paymentUrl = this.vnpayService.buildPaymentUrl(
+            // 3. Gắn Payment URL (dùng factory để support nhiều payment method)
+            const gateway = this.paymentGatewayFactory.getGateway(dto.paymentMethod);
+            responseDto.paymentUrl = await gateway.buildPaymentUrl(
                 savedOrder.id,
                 Number(savedOrder.totalAmount),
-                `Thanh toan don hang ${savedOrder.id}`,
+                `Thanhtoandonhang${savedOrder.id}`,
                 ipAddr || '127.0.0.1',
             );
 
