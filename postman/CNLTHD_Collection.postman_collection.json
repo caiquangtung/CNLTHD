@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cnlthd-event-booking-system",
     "name": "CNLTHD - Event Booking System",
-    "description": "Postman collection để test toàn bộ hệ thống Event Booking.\n\n## Hướng dẫn sử dụng\n1. Import file này và file `CNLTHD_Environment.postman_environment.json` vào Postman\n2. Chọn environment `CNLTHD - Local`\n3. Chạy **Auth / Login - Admin** trước (nếu đã có seed data) hoặc **Register** → nâng role → **Login Admin**\n4. Token JWT tự động lưu vào `adminAccessToken` sau khi login\n\n## Seed Data có sẵn (từ init.sql)\n| Email | Password | Role |\n|---|---|---|\n| admin@eventbooking.com | Admin1234 | admin |\n| le.van.organizer@gmail.com | Org1234 | organizer |\n| nguyen.thi.lan@gmail.com | User1234 | user |\n| tran.van.minh@gmail.com | User1234 | user |\n| pham.thi.hoa@gmail.com | User1234 | user |\n\n**Seed IDs cố định** (dùng trực tiếp trong requests):\n- `eventId` Tech Summit: `e0000000-0000-0000-0000-000000000001`\n- `ticketTypeId` Vé Tiêu Chuẩn: `c0000000-0000-0000-0000-000000000001`\n- `userId` Nguyễn Thị Lan: `a0000000-0000-0000-0000-000000000002`\n\n## Luồng test đề xuất\n1. Auth / Login - Admin → lấy adminAccessToken\n2. Test GET Events (Public) → kiểm tra seed data\n3. Tạo Event mới → lấy eventId\n4. Tạo TicketType → lấy ticketTypeId\n5. Test PATCH, DELETE, Restore",
+    "description": "Postman collection để test toàn bộ hệ thống Event Booking.\n\n## Hướng dẫn sử dụng\n1. Import file này và file `CNLTHD_Environment.postman_environment.json` vào Postman\n2. Chọn environment `CNLTHD - Local`\n3. Chạy **Auth / Login - Admin** trước (nếu đã có seed data) hoặc **Register** → nâng role → **Login Admin**\n4. Token JWT tự động lưu vào `adminAccessToken` sau khi login\n\n## Seed Data có sẵn (từ init.sql)\n| Email | Password | Role |\n|---|---|---|\n| admin@eventbooking.com | Admin1234 | admin |\n| le.van.organizer@gmail.com | Org1234 | organizer |\n| nguyen.thi.lan@gmail.com | User1234 | user |\n| tran.van.minh@gmail.com | User1234 | user |\n| pham.thi.hoa@gmail.com | User1234 | user |\n\n**Seed IDs cố định** (dùng trực tiếp trong requests):\n- `eventId` Tech Summit: `e0000000-0000-0000-0000-000000000001`\n- `ticketTypeId` Vé Tiêu Chuẩn: `c0000000-0000-0000-0000-000000000001`\n- `orderId`: `d0000000-0000-0000-0000-000000000001`\n- `userId` Nguyễn Thị Lan: `a0000000-0000-0000-0000-000000000002`\n\n## Luồng test đề xuất\n1. Auth / Login - Admin → lấy adminAccessToken\n2. Test GET Events (Public) → kiểm tra seed data\n3. Tạo Event mới → lấy eventId\n4. Tạo TicketType → lấy ticketTypeId\n5. Test PATCH, DELETE, Restore",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -37,9 +37,27 @@
     },
     {
       "key": "ticketTypeId",
+      "value": "c0000000-0000-0000-0000-000000000001",
+      "type": "string",
+      "description": "UUID của ticket type — mặc định Vé Tiêu Chuẩn (seed). Tự động set sau khi tạo TicketType hoặc GET ticket-types."
+    },
+    {
+      "key": "ticketId",
       "value": "",
       "type": "string",
-      "description": "UUID của ticket type — tự động set sau khi tạo TicketType"
+      "description": "UUID của ticket — tự động set sau khi tạo Ticket"
+    },
+    {
+      "key": "ticketCode",
+      "value": "",
+      "type": "string",
+      "description": "Mã code của ticket — tự động set sau khi tạo Ticket hoặc GET tickets"
+    },
+    {
+      "key": "orderId",
+      "value": "d0000000-0000-0000-0000-000000000001",
+      "type": "string",
+      "description": "UUID đơn hàng — seed: d0000000-0000-0000-0000-000000000001"
     }
   ],
   "item": [
@@ -1274,7 +1292,12 @@
                   "pm.test('Data is array', () => {",
                   "    const body = pm.response.json();",
                   "    pm.expect(body.data).to.be.an('array');",
-                  "});"
+                  "});",
+                  "const data = pm.response.json().data;",
+                  "if (data && data.length > 0 && data[0].id) {",
+                  "    pm.collectionVariables.set('ticketTypeId', data[0].id);",
+                  "    console.log('ticketTypeId saved:', data[0].id);",
+                  "}"
                 ],
                 "type": "text/javascript"
               }
@@ -1336,7 +1359,12 @@
                   "    if (body.data.length > 0) {",
                   "        pm.expect(body.data[0].eventId).to.equal(pm.collectionVariables.get('eventId'));",
                   "    }",
-                  "});"
+                  "});",
+                  "const data = pm.response.json().data;",
+                  "if (data && data.length > 0 && data[0].id) {",
+                  "    pm.collectionVariables.set('ticketTypeId', data[0].id);",
+                  "    console.log('ticketTypeId saved:', data[0].id);",
+                  "}"
                 ],
                 "type": "text/javascript"
               }
@@ -1478,6 +1506,457 @@
                   "    const body = pm.response.json();",
                   "    pm.expect(body.success).to.be.true;",
                   "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Tickets",
+      "description": "Quản lý vé (Ticket) đã được tạo cho đơn hàng.\n\n**Auth:**\n- Một số route yêu cầu JWT (`accessToken` hoặc `adminAccessToken`)\n- Các route admin/organizer sử dụng `{{adminAccessToken}}` (hoặc token organizer nếu bạn lưu riêng).\n\n**Lưu ý:** Thường tickets được tạo tự động sau khi đặt hàng. Các request dưới đây hỗ trợ test trực tiếp module Tickets.",
+      "item": [
+        {
+          "name": "POST /tickets - Tạo ticket (Admin/Organizer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"d0000000-0000-0000-0000-000000000001\",\n  \"ticketTypeId\": \"c0000000-0000-0000-0000-000000000001\",\n  \"ticketCode\": \"TICKET-{{$timestamp}}\",\n  \"qrData\": \"qr-data-for-{{$timestamp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tickets",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets"]
+            },
+            "description": "Tạo một ticket mới. **Yêu cầu role admin hoặc organizer.**\n\nLưu ý: `orderId` cần trỏ tới một đơn hàng hợp lệ trong DB."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('success is true', () => pm.expect(body.success).to.be.true);",
+                  "if (body.data) {",
+                  "  pm.collectionVariables.set('ticketId', body.data.id);",
+                  "  pm.collectionVariables.set('ticketCode', body.data.ticketCode);",
+                  "  console.log('ticketId saved:', body.data.id);",
+                  "  console.log('ticketCode saved:', body.data.ticketCode);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /tickets - Lấy tất cả tickets (Admin/Organizer)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tickets",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets"]
+            },
+            "description": "Lấy danh sách tất cả tickets. **Yêu cầu role admin hoặc organizer.**"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Data is array', () => pm.expect(body.data).to.be.an('array'));",
+                  "if (body.data && body.data.length > 0) {",
+                  "  pm.collectionVariables.set('ticketId', body.data[0].id);",
+                  "  pm.collectionVariables.set('ticketCode', body.data[0].ticketCode);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /tickets/deleted - Lấy tickets đã xóa (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tickets/deleted",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "deleted"]
+            },
+            "description": "Lấy danh sách tickets đã bị soft delete. **Yêu cầu role admin.**"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /tickets/me - Lấy tickets của current user",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tickets/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "me"]
+            },
+            "description": "Lấy tất cả tickets thuộc về user đang đăng nhập (dựa trên đơn hàng). **Yêu cầu login (mọi role).**"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Data is array', () => pm.expect(body.data).to.be.an('array'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /tickets/order/:orderId - Lấy tickets theo đơn hàng",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tickets/order/d0000000-0000-0000-0000-000000000001",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "order", "d0000000-0000-0000-0000-000000000001"]
+            },
+            "description": "Lấy tickets theo `orderId`. **Yêu cầu role admin hoặc organizer.**\n\nSeed orderId: d0000000-0000-0000-0000-000000000001"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "if (body.data && body.data.length > 0) {",
+                  "  pm.collectionVariables.set('ticketCode', body.data[0].ticketCode);",
+                  "  pm.collectionVariables.set('ticketId', body.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /tickets/code/:ticketCode - Lấy ticket theo code",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tickets/code/{{ticketCode}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "code", "{{ticketCode}}"]
+            },
+            "description": "Lấy ticket theo `ticketCode`. **Yêu cầu login (mọi role).**\n\nBiến `{{ticketCode}}` được set sau khi tạo ticket."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Ticket code matches', () => pm.expect(body.data.ticketCode).to.equal(pm.collectionVariables.get('ticketCode')));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /tickets/:id/qr - QR code base64",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{{ticketId}}/qr",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "{{ticketId}}", "qr"]
+            },
+            "description": "Trả về QR code dạng base64 (data URL). Response: { success, data: \"data:image/png;base64,...\" }. Copy data → dán vào img src để xem ảnh."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Data is base64 data URL', () => {",
+                  "  pm.expect(body.data).to.be.a('string');",
+                  "  pm.expect(body.data).to.match(/^data:image\\/png;base64,/);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /tickets/:id - Lấy ticket theo ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{{ticketId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "{{ticketId}}"]
+            },
+            "description": "Lấy chi tiết một ticket theo UUID. **Yêu cầu login (mọi role).**"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Ticket has required fields', () => {",
+                  "  const t = body.data;",
+                  "  pm.expect(t).to.have.property('id');",
+                  "  pm.expect(t).to.have.property('ticketCode');",
+                  "  pm.expect(t).to.have.property('status');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /tickets/:id - Cập nhật ticket (Admin/Organizer)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticketCode\": \"UPDATED-{{ticketCode}}\",\n  \"qrData\": \"updated-qr-data-{{$timestamp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{{ticketId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "{{ticketId}}"]
+            },
+            "description": "Cập nhật thông tin ticket. **Yêu cầu role admin hoặc organizer.**\n\nTất cả fields đều optional."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /tickets/:id/use - Đánh dấu ticket đã sử dụng",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{{ticketId}}/use",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "{{ticketId}}", "use"]
+            },
+            "description": "Đánh dấu ticket ở trạng thái `USED`. **Yêu cầu role admin hoặc organizer.**"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Ticket status is used', () => pm.expect(body.data.status).to.equal('used'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /tickets/:id/cancel - Hủy ticket",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{{ticketId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "{{ticketId}}", "cancel"]
+            },
+            "description": "Đánh dấu ticket ở trạng thái `CANCELLED`. **Yêu cầu role admin hoặc organizer.**"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Ticket status is cancelled', () => pm.expect(body.data.status).to.equal('cancelled'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /tickets/:id/restore - Khôi phục ticket đã xóa (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{{ticketId}}/restore",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "{{ticketId}}", "restore"]
+            },
+            "description": "Khôi phục ticket đã bị soft delete. **Yêu cầu role admin.**"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /tickets/:id - Xóa ticket (soft delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{{ticketId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "{{ticketId}}"]
+            },
+            "description": "Soft delete ticket. **Yêu cầu role admin hoặc organizer.**\n\nExpect 204 No Content."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 204', () => pm.response.to.have.status(204));"
                 ],
                 "type": "text/javascript"
               }

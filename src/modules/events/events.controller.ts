@@ -24,11 +24,21 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { UserRole } from '../users/entities/user.entity';
+import { TicketTypesService } from '../ticket-types/ticket-types.service';
+import { CreateTicketTypeDto } from '../ticket-types/dto/create-ticket-type.dto';
+import { TicketTypeResponseDto } from '../ticket-types/dto/ticket-type-response.dto';
+import {
+  mapTicketTypeToResponseDto,
+  mapTicketTypesToResponseDto,
+} from '../ticket-types/mappers/ticket-type.mapper';
 
 @Controller('events')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class EventsController {
-  constructor(private readonly eventsService: EventsService) {}
+  constructor(
+    private readonly eventsService: EventsService,
+    private readonly ticketTypesService: TicketTypesService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -61,6 +71,32 @@ export class EventsController {
   ): Promise<EventResponseDto> {
     const event = await this.eventsService.findById(id);
     return mapEventToResponseDto(event);
+  }
+
+  @Get(':id/tickets')
+  @Public()
+  async findTicketsByEvent(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<TicketTypeResponseDto[]> {
+    await this.eventsService.findById(id);
+    const ticketTypes = await this.ticketTypesService.findByEvent(id);
+    return mapTicketTypesToResponseDto(ticketTypes);
+  }
+
+  @Post(':id/tickets')
+  @HttpCode(HttpStatus.CREATED)
+  @Roles(UserRole.ADMIN)
+  async createTicketTypeForEvent(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() createTicketTypeDto: CreateTicketTypeDto,
+  ): Promise<TicketTypeResponseDto> {
+    await this.eventsService.findById(id);
+
+    const ticketType = await this.ticketTypesService.create({
+      ...createTicketTypeDto,
+      eventId: id,
+    });
+    return mapTicketTypeToResponseDto(ticketType);
   }
 
   @Patch(':id')

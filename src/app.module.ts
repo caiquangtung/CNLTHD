@@ -10,6 +10,7 @@ import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { TicketTypesModule } from './modules/ticket-types/ticket-types.module';
 import { EventsModule } from './modules/events/events.module';
+import { TicketsModule } from './modules/tickets/tickets.module';
 
 @Module({
   imports: [
@@ -46,7 +47,7 @@ import { EventsModule } from './modules/events/events.module';
     // BookingsModule,
     // OrdersModule,
     // PaymentsModule,
-    // TicketsModule,
+    TicketsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

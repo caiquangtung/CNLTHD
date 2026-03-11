@@ -27,6 +27,6 @@ export class UserResponseDto {
   @Exclude()
   profileData: Record<string, any>;
 
-  @Exclude()
-  deletedAt?: Date;
+  // @Exclude()
+  // deletedAt?: Date;
 }
