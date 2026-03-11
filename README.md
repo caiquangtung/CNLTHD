@@ -42,18 +42,24 @@ Dự án được phát triển theo 3 giai đoạn:
 ## ✨ Tính năng chính
 
 ### 👤 Quản lý người dùng
+
 - Đăng ký/đăng nhập với authentication
 - Quản lý profile người dùng
 
 ### 🎪 Quản lý sự kiện
+
 - Tạo và quản lý sự kiện
 - Quản lý trạng thái sự kiện
+- **Quan hệ User-Event**: Một user (role `organizer` hoặc `admin`) có thể tạo nhiều event
+- Chỉ **owner** hoặc **admin** mới được sửa/xóa event của mình
 
 ### 🎫 Hệ thống vé
+
 - Nhiều loại vé cho mỗi sự kiện
 - Quản lý số lượng vé có sẵn
 
 ### 🛒 Đặt vé và thanh toán
+
 - Đặt vé với validation
 - Lưu payment trực tiếp vào database
 
@@ -79,6 +85,7 @@ src/
 ### 📁 Cấu trúc Module
 
 NestJS sử dụng kiến trúc module-based với:
+
 - **Modules**: Tổ chức code thành các module độc lập
 - **Controllers**: Xử lý HTTP requests
 - **Services**: Chứa business logic
@@ -89,16 +96,19 @@ NestJS sử dụng kiến trúc module-based với:
 ### Giai Đoạn 1: MVP Stack (Hiện Tại)
 
 #### Backend Framework
+
 - **NestJS** - Enterprise Node.js framework
 - **TypeScript** - Strict type checking
 - **Node.js** - Runtime environment
 
 #### Database
+
 - **PostgreSQL 15+** - Production database
 - **TypeORM** - ORM with full transaction support
 - **Connection Pooling** - Optimized for 500-1,000 concurrent users
 
 #### Core NestJS Features
+
 - **Modules** - Application architecture
 - **Controllers** - HTTP request handling
 - **Services** - Business logic
@@ -109,6 +119,7 @@ NestJS sử dụng kiến trúc module-based với:
 - **Scheduled Jobs** - Background cleanup tasks
 
 #### Performance Optimizations
+
 - ✅ **Pessimistic Locking** - Prevent race conditions
 - ✅ **Optimistic Locking** - Backup strategy with retry
 - ✅ **Transaction Management** - ACID compliance
@@ -117,10 +128,12 @@ NestJS sử dụng kiến trúc module-based với:
 - ✅ **Connection Pooling** - Efficient database connections
 
 ### Giai Đoạn 2: Growth Stack (Future)
+
 - ➕ **Redis** - Distributed caching & session management
 - ➕ **Rate Limiting** - Request throttling
 
 ### Giai Đoạn 3: Scale Stack (Future)
+
 - ➕ **Bull Queue** - Job processing system
 - ➕ **PostgreSQL Replicas** - Read scaling
 - ➕ **Prometheus + Grafana** - Monitoring & alerting
@@ -131,21 +144,25 @@ NestJS sử dụng kiến trúc module-based với:
 ### Phương pháp 1: Sử dụng Docker (Khuyến nghị)
 
 #### Yêu cầu hệ thống
+
 - Docker >= 20.0
 - Docker Compose >= 2.0
 
 #### 1. Clone repository
+
 ```bash
 git clone https://github.com/caiquangtung/CNLTHD.git
 cd CNLTHD
 ```
 
 #### 2. Cấu hình môi trường
+
 ```bash
 cp .env.example .env
 ```
 
 #### 3. Khởi động PostgreSQL với Docker
+
 ```bash
 # Khởi động PostgreSQL (chỉ cần cho NestJS app)
 docker-compose up -d postgres
@@ -156,6 +173,7 @@ docker-compose logs postgres
 ```
 
 #### 4. Cài đặt dependencies và chạy ứng dụng
+
 ```bash
 npm install
 
@@ -188,24 +206,29 @@ npm run migration:run
 ### Phương pháp 2: Cài đặt thủ công
 
 #### Yêu cầu hệ thống
+
 - Node.js >= 18.0.0
 - PostgreSQL >= 13.0
 
 #### 1. Cài đặt PostgreSQL
+
 Cài đặt PostgreSQL trên máy local hoặc sử dụng Docker như trên.
 
 #### 2. Cài đặt dependencies
+
 ```bash
 npm install
 ```
 
 #### 3. Cấu hình môi trường
+
 ```bash
 cp .env.example .env
 # Chỉnh sửa .env theo cấu hình PostgreSQL của bạn
 ```
 
 #### 4. Khởi tạo database
+
 ```bash
 # Tạo database event_booking trong PostgreSQL
 # (Hoặc sử dụng Docker như phương pháp 1)
@@ -213,6 +236,7 @@ createdb event_booking
 ```
 
 #### 5. Chạy ứng dụng
+
 ```bash
 npm run start:dev
 ```
@@ -234,23 +258,39 @@ All API responses follow a **standardized format** for consistency:
 }
 ```
 
-
 ### Authentication Endpoints
+
 ```http
 POST /auth/register
 POST /auth/login
 ```
 
 ### Events Management
+
 ```http
-GET    /events          # Lấy danh sách sự kiện
-POST   /events          # Tạo sự kiện mới
-GET    /events/:id      # Chi tiết sự kiện
-PUT    /events/:id      # Cập nhật sự kiện
-DELETE /events/:id      # Xóa sự kiện
+GET    /events              # Lấy danh sách sự kiện (public)
+POST   /events              # Tạo sự kiện mới (ADMIN, ORGANIZER) - tự động gắn organizerId
+GET    /events/my-events    # Lấy các sự kiện do user hiện tại tạo (requires JWT)
+GET    /events/:id          # Chi tiết sự kiện (public)
+PATCH  /events/:id          # Cập nhật sự kiện (ADMIN hoặc owner)
+DELETE /events/:id          # Xóa sự kiện - soft delete (ADMIN hoặc owner)
+PATCH  /events/:id/restore  # Khôi phục sự kiện đã xóa (ADMIN)
+GET    /events/deleted      # Danh sách sự kiện đã xóa (ADMIN)
 ```
 
+#### Quy tắc phân quyền Events
+
+| Hành động                | Quyền yêu cầu                            |
+| ------------------------ | ---------------------------------------- |
+| Xem danh sách / chi tiết | Public (không cần đăng nhập)             |
+| Tạo event                | `ADMIN` hoặc `ORGANIZER`                 |
+| Sửa / Xóa event          | `ADMIN` hoặc **người tạo event (owner)** |
+| Xem events của mình      | Bất kỳ user đã đăng nhập                 |
+
+> **Lưu ý**: Khi xóa user, các event do user đó tạo vẫn tồn tại trong hệ thống, chỉ `organizer_id` được set về `NULL`.
+
 ### Booking System
+
 ```http
 POST   /bookings        # Tạo booking mới
 GET    /bookings/my     # Lịch sử booking của user
@@ -276,6 +316,7 @@ npm run test:watch
 ```
 
 ### Testing Strategies trong NestJS:
+
 - **Unit Tests** cho Services, Guards, Pipes
 - **Integration Tests** cho Modules
 - **E2E Tests** cho HTTP endpoints
@@ -287,7 +328,8 @@ npm run test:watch
 
 **Mới vào dự án?** Đọc file này trước: [`doc/PROJECT_SUMMARY.md`](doc/PROJECT_SUMMARY.md) - Tóm tắt toàn bộ dự án
 
-**Team 4 người (Tùng, Hoàng-19, Hoàng-20, Khánh)?** Đọc: 
+**Team 4 người (Tùng, Hoàng-19, Hoàng-20, Khánh)?** Đọc:
+
 - ⭐ [`FEATURE_ASSIGNMENT.md`](FEATURE_ASSIGNMENT.md) - Phân công chi tiết (25% mỗi người, tự test)
 - 🚀 [`QUICK_START.md`](QUICK_START.md) - Quick start 5 phút
 - 🗑️ [`SOFT_DELETE_GUIDE.md`](SOFT_DELETE_GUIDE.md) - Soft delete (BaseEntity)
@@ -296,6 +338,7 @@ npm run test:watch
 ### 👥 Team Assignment (4 người: Tùng, Hoàng-19, Hoàng-20, Khánh)
 
 ⭐ [`FEATURE_ASSIGNMENT.md`](FEATURE_ASSIGNMENT.md) - Complete feature assignment (25% each):
+
 - **Tùng**: Foundation + Auth + Reservations ⭐⭐⭐ CRITICAL
 - **Hoàng-19**: Events + Ticket Types
 - **Hoàng-20**: Orders + Payments + Admin ⭐⭐⭐ CRITICAL
@@ -321,11 +364,13 @@ npm run test:watch
 ### 📖 Đọc Theo Thứ Tự
 
 **Cho người mới:**
+
 1. ⭐ [`PROJECT_SUMMARY.md`](doc/PROJECT_SUMMARY.md) - Overview nhanh 5 phút
 2. 🚀 [`DATABASE_OPTIMIZATION.md`](doc/DATABASE_OPTIMIZATION.md) - Hiểu kiến trúc
 3. 🎯 [`TECHNICAL_DECISIONS.md`](doc/TECHNICAL_DECISIONS.md) - Tại sao như vậy
 
 **Cho developers (Team 4 người):**
+
 1. ⭐ [`FEATURE_ASSIGNMENT.md`](FEATURE_ASSIGNMENT.md) - Complete task assignment (25% mỗi người)
 2. 📅 [`IMPLEMENTATION_ROADMAP.md`](doc/IMPLEMENTATION_ROADMAP.md) - Làm gì từng tuần
 3. 🏗️ [`DATABASE_SCHEMA.md`](doc/DATABASE_SCHEMA.md) - Reference database
@@ -333,6 +378,7 @@ npm run test:watch
 5. 🎯 [`TECHNICAL_DECISIONS.md`](doc/TECHNICAL_DECISIONS.md) - Tại sao như vậy
 
 **Cho learners:**
+
 1. 🎓 [`KNOWLEDGE.md`](doc/KNOWLEDGE.md) - Học NestJS từ đầu
 2. ⚡ [`NESTJS_CLI_GUIDE.md`](doc/NESTJS_CLI_GUIDE.md) - Sử dụng CLI hiệu quả
 
@@ -348,6 +394,7 @@ npm run test:watch
 ## 👨‍💻 Tác giả
 
 **Tung Ca Quang**
+
 - Email: [caitung8@gmail.com]
 - GitHub: [@caiquangtung]
 

@@ -1,5 +1,6 @@
-import { Entity, Column, Index } from 'typeorm';
+import { Entity, Column, Index, OneToMany } from 'typeorm';
 import { BaseEntity } from '../../../common/entities';
+import type { Event } from '../../events/entities/event.entity';
 
 export enum UserRole {
   ADMIN = 'admin',
@@ -29,4 +30,7 @@ export class User extends BaseEntity {
     default: UserRole.USER,
   })
   role: UserRole;
+
+  @OneToMany('Event', (event: Event) => event.organizer)
+  createdEvents: Event[];
 }
