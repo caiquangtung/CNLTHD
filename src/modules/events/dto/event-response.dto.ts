@@ -27,6 +27,9 @@ export class EventResponseDto {
   status: EventStatus;
 
   @Expose()
+  organizerId: string | null;
+
+  @Expose()
   createdAt: Date;
 
   @Expose()

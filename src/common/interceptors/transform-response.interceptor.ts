@@ -13,9 +13,10 @@ import { ApiResponse } from '../interfaces/api-response.interface';
  * Wraps all successful responses in a standard format
  */
 @Injectable()
-export class TransformResponseInterceptor<T>
-  implements NestInterceptor<T, ApiResponse<T>>
-{
+export class TransformResponseInterceptor<T> implements NestInterceptor<
+  T,
+  ApiResponse<T>
+> {
   intercept(
     context: ExecutionContext,
     next: CallHandler,

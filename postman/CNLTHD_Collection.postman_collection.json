@@ -577,7 +577,7 @@
     },
     {
       "name": "Events",
-      "description": "Quản lý sự kiện.\n\n**Auth:**\n- GET routes: Public (không cần token)\n- POST, PATCH, DELETE: cần JWT token với role `admin`\n\nSử dụng `{{adminAccessToken}}` cho các request yêu cầu admin.",
+      "description": "Quản lý sự kiện.\n\n**Auth:**\n- GET routes: Public (không cần token), riêng `/my-events` cần JWT\n- POST: yêu cầu role `admin` hoặc `organizer` — tự động gắn `organizerId`\n- PATCH, DELETE: `admin` hoặc **owner** (người tạo event)\n\n**Business Rules:**\n- User thường (role=user) KHÔNG tạo được event → 403\n- Chỉ owner hoặc admin mới sửa/xóa được event của mình → 403 nếu vi phạm\n- Khi xóa user: event vẫn tồn tại, `organizer_id` = NULL",
       "item": [
         {
           "name": "POST /events - Tạo sự kiện mới",
@@ -720,7 +720,7 @@
           ]
         },
         {
-          "name": "POST /events - User thường tạo event (trở thành organizer)",
+          "name": "POST /events - User thường tạo event (expect 403)",
           "request": {
             "method": "POST",
             "header": [
@@ -736,7 +736,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["events"]
             },
-            "description": "User thường (không phải admin) tạo event → tự động trở thành organizer.\n\nResponse sẽ có `organizerId` = id của user đang đăng nhập.\n\nDùng `{{accessToken}}` (token user thường từ Login)."
+            "description": "User thường (role=user) cố tạo event → 403 Forbidden.\n\n**Business Rule:** Chỉ role `admin` hoặc `organizer` mới được tạo event.\n\nDùng token từ 'POST /auth/login' (role: user)."
           },
           "response": [],
           "event": [
@@ -744,20 +744,47 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
-                  "pm.test('organizerId equals current user', () => {",
+                  "pm.test('Status 403 - user role cannot create event', () => pm.response.to.have.status(403));",
+                  "pm.test('success is false', () => {",
                   "    const body = pm.response.json();",
-                  "    pm.expect(body.data).to.have.property('organizerId');",
-                  "    pm.expect(body.data.organizer).to.have.property('id');",
-                  "    pm.expect(body.data.organizer).to.have.property('email');",
-                  "    pm.expect(body.data.organizer).to.have.property('fullName');",
-                  "});",
-                  "const data = pm.response.json().data;",
-                  "if (data && data.id) {",
-                  "    pm.collectionVariables.set('eventId', data.id);",
-                  "    console.log('eventId saved (user-created):', data.id);",
-                  "    console.log('organizer:', data.organizer?.email);",
-                  "}"
+                  "    pm.expect(body.success).to.be.false;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /events - Slug đã tồn tại (expect 409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tech Summit Duplicate\",\n  \"slug\": \"tech-summit-2026\",\n  \"description\": \"Dùng slug đã tồn tại trong seed data\",\n  \"location\": \"Hà Nội\",\n  \"startTime\": \"2026-08-01T08:00:00.000Z\",\n  \"endTime\": \"2026-08-01T17:00:00.000Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["events"]
+            },
+            "description": "Tạo event với slug `tech-summit-2026` đã tồn tại trong seed data.\n\nExpect 409 Conflict."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 409 Conflict - slug already exists', () => pm.response.to.have.status(409));",
+                  "pm.test('success is false', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "});"
                 ],
                 "type": "text/javascript"
               }
@@ -844,7 +871,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["events"]
             },
-            "description": "Lấy danh sách tất cả events. Không yêu cầu auth."
+            "description": "Lấy danh sách tất cả events. Không yêu cầu auth.\n\nResponse mỗi event có trường `organizerId` (UUID người tạo)."
           },
           "response": [],
           "event": [
@@ -858,12 +885,115 @@
                   "    pm.expect(body.success).to.be.true;",
                   "    pm.expect(body.data).to.be.an('array');",
                   "});",
+                  "pm.test('Events have organizerId field', () => {",
+                  "    const events = pm.response.json().data;",
+                  "    if (events && events.length > 0) {",
+                  "        pm.expect(events[0]).to.have.property('organizerId');",
+                  "    }",
+                  "});",
                   "// Lưu eventId từ phần tử đầu tiên nếu chưa có",
                   "const events = pm.response.json().data;",
                   "if (events && events.length > 0 && !pm.collectionVariables.get('eventId')) {",
                   "    pm.collectionVariables.set('eventId', events[0].id);",
                   "    console.log('eventId saved from list:', events[0].id);",
                   "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /events/my-events - Events của user hiện tại",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/events/my-events",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "my-events"]
+            },
+            "description": "Lấy danh sách event **do user hiện tại tạo** (organizerId = currentUser.id).\n\nYêu cầu JWT token. Trả về mảng có thể rỗng nếu user chưa tạo event nào."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Data is array', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.data).to.be.an('array');",
+                  "});",
+                  "pm.test('Each event belongs to current user', () => {",
+                  "    const events = pm.response.json().data;",
+                  "    const userId = pm.collectionVariables.get('userId');",
+                  "    events.forEach(event => {",
+                  "        pm.expect(event.organizerId).to.equal(userId);",
+                  "    });",
+                  "});",
+                  "console.log('My events count:', pm.response.json().data.length);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /events/my-events - Không có token (expect 401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/events/my-events",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "my-events"]
+            },
+            "description": "Test bảo mật — endpoint `/my-events` yêu cầu JWT.\n\nExpect 401 Unauthorized."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401 when no token', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /events/my-events - Admin xem events của mình",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/events/my-events",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "my-events"]
+            },
+            "description": "Admin dùng my-events — trả về events có `organizerId` = adminId.\n\nSeed data có `tech-summit-2026` với organizer_id = admin → sẽ trả về ít nhất 1 event."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Admin gets their events', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data).to.be.an('array');",
+                  "});",
+                  "console.log('Admin's event count:', pm.response.json().data.length);"
                 ],
                 "type": "text/javascript"
               }
@@ -965,18 +1095,12 @@
           ]
         },
         {
-          "name": "PATCH /events/:id - Cập nhật event",
+          "name": "PATCH /events/:id - Admin cập nhật event",
           "request": {
             "method": "PATCH",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
             ],
             "body": {
               "mode": "raw",
@@ -987,7 +1111,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["events", "{{eventId}}"]
             },
-            "description": "Cập nhật thông tin event. **Yêu cầu role admin.**\n\nTất cả fields đều optional."
+            "description": "Admin cập nhật bất kỳ event nào dù không phải owner.\n\n**Business Rule:** Admin có thể sửa mọi event."
           },
           "response": [],
           "event": [
@@ -1000,6 +1124,43 @@
                   "    const body = pm.response.json();",
                   "    pm.expect(body.data.name).to.equal('Tech Conference 2026 - Updated');",
                   "    pm.expect(body.data.status).to.equal('published');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /events/:id - Organizer cập nhật event của mình",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Mô tả được cập nhật bởi organizer\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/events/{{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "{{eventId}}"]
+            },
+            "description": "Organizer cập nhật event **do chính mình tạo** (owner).\n\n**Yêu cầu:** Dùng token organizer (`le.van.organizer@gmail.com`) và `{{eventId}}` phải là event do organizer đó tạo.\n\n**Luồng test:** Chạy 'Login - Organizer' → 'Organizer tạo event' → request này."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - owner can update their event', () => pm.response.to.have.status(200));",
+                  "pm.test('Description updated', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "    pm.expect(body.data.description).to.equal('Mô tả được cập nhật bởi organizer');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -1050,21 +1211,45 @@
           ]
         },
         {
-          "name": "DELETE /events/:id - Xóa event (soft delete)",
+          "name": "DELETE /events/:id - Owner xóa event của mình",
           "request": {
             "method": "DELETE",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
-              }
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
             "url": {
               "raw": "{{baseUrl}}/events/{{eventId}}",
               "host": ["{{baseUrl}}"],
               "path": ["events", "{{eventId}}"]
             },
-            "description": "Soft delete event. **Yêu cầu role admin.**\n\nExpect 204 No Content."
+            "description": "Owner (organizer) xóa event **do chính mình tạo**.\n\n**Yêu cầu:** Token phải là owner của `{{eventId}}`.\n\nExpect 204 No Content."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 204 - owner can delete their event', () => pm.response.to.have.status(204));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /events/:id - Admin xóa bất kỳ event (soft delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/events/{{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "{{eventId}}"]
+            },
+            "description": "Admin soft delete bất kỳ event dù không phải owner.\n\nExpect 204 No Content."
           },
           "response": [],
           "event": [
@@ -1117,7 +1302,7 @@
     },
     {
       "name": "Ticket Types",
-      "description": "Quản lý loại vé cho sự kiện.\n\n**Auth:**\n- GET routes: Public\n- POST, PATCH, DELETE: cần JWT token với role `admin`\n\n**Lưu ý:** Cần có `eventId` hợp lệ trước khi tạo ticket type. Biến `{{eventId}}` được set tự động sau khi tạo Event.",
+      "description": "Quản lý loại vé cho sự kiện.\n\n**Auth:**\n- GET routes: Public\n- POST, PATCH, DELETE: cần JWT token với role `admin`\n\n**Lưu ý:** Cần có `eventId` hợp lệ trước khi tạo ticket type. Biến `{{eventId}}` được set tự động sau khi tạo Event.\n\n**Seed IDs cố định (không cần tạo):**\n- `c0000000-0000-0000-0000-000000000001` — Vé Tiêu Chuẩn (event: Tech Summit)\n- `c0000000-0000-0000-0000-000000000002` — Vé VIP (event: Tech Summit)",
       "item": [
         {
           "name": "POST /ticket-types - Tạo loại vé",
@@ -1208,6 +1393,71 @@
               "script": {
                 "exec": [
                   "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /ticket-types - Không có token (expect 401)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"name\": \"Vé Test\",\n  \"description\": \"Test\",\n  \"price\": 100000,\n  \"quantity\": 100\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ticket-types",
+              "host": ["{{baseUrl}}"],
+              "path": ["ticket-types"]
+            },
+            "description": "Test bảo mật — không gửi JWT token.\n\nExpect 401 Unauthorized."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401 when no token', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /ticket-types - Event không tồn tại (expect 404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventId\": \"00000000-0000-0000-0000-000000000000\",\n  \"name\": \"Vé Test\",\n  \"description\": \"Event không tồn tại\",\n  \"price\": 100000,\n  \"quantity\": 100\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ticket-types",
+              "host": ["{{baseUrl}}"],
+              "path": ["ticket-types"]
+            },
+            "description": "Tạo ticket type với eventId trỏ đến event không tồn tại.\n\nExpect 404 Not Found."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 - event not found', () => pm.response.to.have.status(404));",
+                  "pm.test('success is false', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.false;",
+                  "});"
                 ],
                 "type": "text/javascript"
               }
@@ -1344,6 +1594,31 @@
           ]
         },
         {
+          "name": "GET /ticket-types/:id - ID không tồn tại (expect 404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ticket-types/00000000-0000-0000-0000-000000000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["ticket-types", "00000000-0000-0000-0000-000000000000"]
+            },
+            "description": "UUID hợp lệ nhưng không tồn tại trong DB.\n\nExpect 404 Not Found."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
           "name": "GET /ticket-types/:id - Lấy loại vé theo ID (Public)",
           "request": {
             "method": "GET",
@@ -1371,6 +1646,67 @@
                   "    pm.expect(tt).to.have.property('quantity');",
                   "    pm.expect(tt).to.have.property('maxPerOrder');",
                   "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /ticket-types/:id - Không có token (expect 401)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 999000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ticket-types/{{ticketTypeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ticket-types", "{{ticketTypeId}}"]
+            },
+            "description": "Test bảo mật — PATCH không có token.\n\nExpect 401 Unauthorized."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401 when no token', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /ticket-types/:id - ID không tồn tại (expect 404)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 999000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ticket-types/00000000-0000-0000-0000-000000000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["ticket-types", "00000000-0000-0000-0000-000000000000"]
+            },
+            "description": "PATCH với UUID không tồn tại.\n\nExpect 404 Not Found."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));"
                 ],
                 "type": "text/javascript"
               }
@@ -1414,6 +1750,31 @@
                   "    pm.expect(body.data.price).to.equal(350000);",
                   "    pm.expect(body.data.quantity).to.equal(600);",
                   "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /ticket-types/:id - Không có token (expect 401)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ticket-types/{{ticketTypeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ticket-types", "{{ticketTypeId}}"]
+            },
+            "description": "Test bảo mật — DELETE không có token.\n\nExpect 401 Unauthorized."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401 when no token', () => pm.response.to.have.status(401));"
                 ],
                 "type": "text/javascript"
               }
@@ -1657,7 +2018,38 @@
           ]
         },
         {
-          "name": "6. Xem Event theo ID (Public)",
+          "name": "6. GET /events/my-events (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/events/my-events",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "my-events"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('My Events: Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns events owned by admin', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data).to.be.an('array');",
+                  "});",
+                  "console.log('[E2E] Step 6: My events count:', pm.response.json().data.length);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "7. Xem Event theo ID (Public)",
           "request": {
             "method": "GET",
             "header": [],
@@ -1682,7 +2074,7 @@
           ]
         },
         {
-          "name": "7. Xem vé theo Event (Public)",
+          "name": "8. Xem vé theo Event (Public)",
           "request": {
             "method": "GET",
             "header": [],
@@ -1711,7 +2103,7 @@
           ]
         },
         {
-          "name": "8. Update Event (Admin)",
+          "name": "9. Update Event (Admin)",
           "request": {
             "method": "PATCH",
             "header": [
@@ -1743,7 +2135,7 @@
           ]
         },
         {
-          "name": "9. Delete TicketType → Xem trong deleted list",
+          "name": "10. Delete TicketType → Xem trong deleted list",
           "request": {
             "method": "DELETE",
             "header": [
@@ -1770,7 +2162,7 @@
           ]
         },
         {
-          "name": "10. Restore TicketType",
+          "name": "11. Restore TicketType",
           "request": {
             "method": "PATCH",
             "header": [
@@ -1789,7 +2181,7 @@
               "script": {
                 "exec": [
                   "pm.test('Restore TicketType: Status 200', () => pm.response.to.have.status(200));",
-                  "console.log('[E2E] Step 10: TicketType restored. E2E flow completed!');"
+                  "console.log('[E2E] Step 11: TicketType restored. E2E flow completed!');"
                 ],
                 "type": "text/javascript"
               }
