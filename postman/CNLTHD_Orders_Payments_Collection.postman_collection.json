@@ -1,0 +1,593 @@
+{
+    "info": {
+        "_postman_id": "cnlthd-orders-payments",
+        "name": "CNLTHD - Orders & Payments Testing",
+        "description": "Collection riêng để test Orders và Payments module\n\n## Seed Data (Từ migration)\n- User: `nguyen.thi.lan@gmail.com` / `User1234` (UUID: `a0000000-0000-0000-0000-000000000002`)\n- Event: `Tech Summit Vietnam 2026` (UUID: `e0000000-0000-0000-0000-000000000001`)\n- TicketType: `c0000000-0000-0000-0000-000000000001` (Vé Tiêu Chuẩn - 500,000 VND)\n- Order 1: `d0000000-0000-0000-0000-000000000001` (1,000,000 VND - paid)\n- Payment 1: `b0000000-0000-0000-0000-000000000001`\n\n## Hướng dẫn sử dụng\n1. Import collection này vào Postman\n2. Chọn environment `CNLTHD - Local`\n3. Chạy 'Auth / Login' trước để lấy token\n4. Test Orders endpoints (create, list, detail)\n5. Test Payments endpoints",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:3000/api",
+            "type": "string"
+        },
+        {
+            "key": "userAccessToken",
+            "value": "",
+            "type": "string",
+            "description": "Token của user thường (nguyen.thi.lan@gmail.com)"
+        },
+        {
+            "key": "userId",
+            "value": "a0000000-0000-0000-0000-000000000002",
+            "type": "string",
+            "description": "User ID hiện tại"
+        },
+        {
+            "key": "orderId",
+            "value": "",
+            "type": "string",
+            "description": "Order ID vừa tạo hoặc từ seed data"
+        },
+        {
+            "key": "ticketTypeId",
+            "value": "c0000000-0000-0000-0000-000000000001",
+            "type": "string",
+            "description": "ID loại vé từ seed data"
+        },
+        {
+            "key": "paymentId",
+            "value": "",
+            "type": "string",
+            "description": "Payment ID vừa tạo hoặc từ seed data"
+        }
+    ],
+    "item": [
+        {
+            "name": "Auth",
+            "item": [
+                {
+                    "name": "POST /auth/login - User",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"nguyen.thi.lan@gmail.com\",\n  \"password\": \"User1234\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        },
+                        "description": "Đăng nhập user từ seed data"
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "const data = pm.response.json().data;",
+                                    "if (data && data.accessToken) {",
+                                    "    pm.collectionVariables.set('userAccessToken', data.accessToken);",
+                                    "    console.log('User token saved');",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Orders",
+            "description": "Test Orders CRUD endpoints",
+            "item": [
+                {
+                    "name": "POST /orders - Tạo đơn hàng",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userAccessToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"orderItems\": [\n    {\n      \"ticketTypeId\": \"{{ticketTypeId}}\",\n      \"quantity\": 2\n    }\n  ],\n  \"paymentMethod\": \"credit_card\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/orders",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "orders"
+                            ]
+                        },
+                        "description": "Tạo đơn hàng mới. Cần token user và orderItems hợp lệ."
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "pm.test('Order created', () => {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.success).to.be.true;",
+                                    "    pm.expect(body.data).to.have.property('id');",
+                                    "    pm.expect(body.data.totalAmount).to.be.above(0);",
+                                    "});",
+                                    "const data = pm.response.json().data;",
+                                    "if (data && data.id) {",
+                                    "    pm.collectionVariables.set('orderId', data.id);",
+                                    "    console.log('Order created:', data.id, 'Amount:', data.totalAmount);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "GET /orders - Lấy tất cả đơn hàng (Public)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/orders",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "orders"
+                            ]
+                        },
+                        "description": "Lấy danh sách đơn hàng với phân trang. Không cần auth."
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Response has pagination', () => {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.data).to.be.an('array');",
+                                    "    pm.expect(body).to.have.property('total');",
+                                    "    pm.expect(body).to.have.property('page');",
+                                    "    pm.expect(body).to.have.property('limit');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "GET /orders/my-orders - Lấy đơn hàng của user",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userAccessToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/orders/my-orders",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "orders",
+                                "my-orders"
+                            ]
+                        },
+                        "description": "Lấy tất cả đơn hàng của user hiện tại. Cần token user."
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Data is array', () => {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.data).to.be.an('array');",
+                                    "});",
+                                    "const orders = pm.response.json().data;",
+                                    "if (orders && orders.length > 0) {",
+                                    "    console.log('Found', orders.length, 'orders');",
+                                    "    console.log('First order:', orders[0].id, '-', orders[0].totalAmount, 'VND');",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "GET /orders/:id - Lấy chi tiết đơn hàng (Admin only)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userAccessToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/orders/{{orderId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "orders",
+                                "{{orderId}}"
+                            ]
+                        },
+                        "description": "Lấy chi tiết một đơn hàng. Yêu cầu role admin."
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200 or 403', () => {",
+                                    "    const status = pm.response.code;",
+                                    "    pm.expect([200, 403]).to.include(status);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "PATCH /orders/:id/cancel - Hủy đơn hàng",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userAccessToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/orders/{{orderId}}/cancel",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "orders",
+                                "{{orderId}}",
+                                "cancel"
+                            ]
+                        },
+                        "description": "Hủy đơn hàng (pending → cancelled). Cần token user sở hữu order."
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200 or 400 (if cannot cancel)', () => {",
+                                    "    const status = pm.response.code;",
+                                    "    pm.expect([200, 400]).to.include(status);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Payments",
+            "description": "Test Payments endpoints",
+            "item": [
+                {
+                    "name": "GET /payments - Lấy tất cả payments (Public)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/payments",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "payments"
+                            ]
+                        },
+                        "description": "Lấy danh sách tất cả payments. Không cần auth."
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "const data = pm.response.json().data;",
+                                    "if (data && data.length > 0) {",
+                                    "    pm.collectionVariables.set('paymentId', data[0].id);",
+                                    "    console.log('Payments list fetched. First payment:', data[0].id);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "GET /payments/:id - Lấy chi tiết payment",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/payments/{{paymentId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "payments",
+                                "{{paymentId}}"
+                            ]
+                        },
+                        "description": "Lấy chi tiết một payment theo ID. Không cần auth."
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200 or 404', () => {",
+                                    "    pm.expect([200, 404]).to.include(pm.response.code);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "POST /payments/:orderId/complete - Hoàn tất thanh toán",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"transactionId\": \"TXN_{{$timestamp}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/payments/{{orderId}}/complete",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "payments",
+                                "{{orderId}}",
+                                "complete"
+                            ]
+                        },
+                        "description": "Hoàn tất thanh toán cho đơn hàng (pending → success). Phải là order của user đó."
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200 or 400', () => {",
+                                    "    const status = pm.response.code;",
+                                    "    pm.expect([200, 400]).to.include(status);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "End-to-End Flow",
+            "description": "Luồng test Order → Payment từ đầu đến cuối",
+            "item": [
+                {
+                    "name": "1. Login user",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"nguyen.thi.lan@gmail.com\",\n  \"password\": \"User1234\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        }
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const data = pm.response.json().data;",
+                                    "pm.collectionVariables.set('userAccessToken', data.accessToken);",
+                                    "pm.collectionVariables.set('userId', data.user.id);",
+                                    "console.log('✅ User logged in:', data.user.email);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "2. Tạo đơn hàng",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{userAccessToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"orderItems\": [\n    {\n      \"ticketTypeId\": \"{{ticketTypeId}}\",\n      \"quantity\": 1\n    }\n  ],\n  \"paymentMethod\": \"e_wallet\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/orders",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "orders"
+                            ]
+                        }
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const data = pm.response.json().data;",
+                                    "pm.collectionVariables.set('orderId', data.id);",
+                                    "console.log('✅ Order created:', data.id);",
+                                    "console.log('   Total:', data.totalAmount, 'VND');",
+                                    "console.log('   Status:', data.status);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "3. Xem chi tiết đơn hàng",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/orders/my-orders",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "orders",
+                                "my-orders"
+                            ]
+                        }
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const orders = pm.response.json().data;",
+                                    "console.log('✅ User has', orders.length, 'orders');"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "4. Hoàn tất thanh toán",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"transactionId\": \"TXN_TEST_{{$timestamp}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/payments/{{orderId}}/complete",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "payments",
+                                "{{orderId}}",
+                                "complete"
+                            ]
+                        }
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    console.log('✅ Payment completed successfully');",
+                                    "} else {",
+                                    "    console.log('⚠️ Payment response code:', pm.response.code);",
+                                    "    console.log('Response:', pm.response.json());",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

@@ -166,76 +166,6 @@ export class SeedInitialData1773000000000 implements MigrationInterface {
       ON CONFLICT DO NOTHING
     `);
 
-    // ── ORDERS (3 đơn hàng) ──
-    await queryRunner.query(`
-      INSERT INTO orders (id, user_id, total_amount, status, created_at, updated_at)
-      VALUES
-        ('d0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000002',
-         1000000, 'paid', NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days'),
-
-        ('d0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000003',
-         1500000, 'paid', NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days'),
-
-        ('d0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000004',
-         598000, 'pending', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day')
-      ON CONFLICT DO NOTHING
-    `);
-
-    // ── ORDER ITEMS ──
-    await queryRunner.query(`
-      INSERT INTO order_items (id, order_id, ticket_type_id, quantity, unit_price, created_at, updated_at)
-      VALUES
-        ('f0000000-0000-0000-0000-000000000001', 'd0000000-0000-0000-0000-000000000001',
-         'c0000000-0000-0000-0000-000000000001', 2, 500000,
-         NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days'),
-
-        ('f0000000-0000-0000-0000-000000000002', 'd0000000-0000-0000-0000-000000000002',
-         'c0000000-0000-0000-0000-000000000002', 1, 1500000,
-         NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days'),
-
-        ('f0000000-0000-0000-0000-000000000003', 'd0000000-0000-0000-0000-000000000003',
-         'c0000000-0000-0000-0000-000000000004', 2, 299000,
-         NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day')
-      ON CONFLICT DO NOTHING
-    `);
-
-    // ── PAYMENTS (2 thanh toán thành công) ──
-    await queryRunner.query(`
-      INSERT INTO payments (id, order_id, amount, payment_method, status, transaction_id, payment_time, created_at, updated_at)
-      VALUES
-        ('b0000000-0000-0000-0000-000000000001', 'd0000000-0000-0000-0000-000000000001',
-         1000000, 'e_wallet', 'success', 'TXN-2026-LAN-001',
-         NOW() - INTERVAL '10 days' + INTERVAL '5 minutes',
-         NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days'),
-
-        ('b0000000-0000-0000-0000-000000000002', 'd0000000-0000-0000-0000-000000000002',
-         1500000, 'credit_card', 'success', 'TXN-2026-MINH-001',
-         NOW() - INTERVAL '7 days' + INTERVAL '3 minutes',
-         NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days')
-      ON CONFLICT (order_id) DO NOTHING
-    `);
-
-    // ── TICKETS (vé điện tử cho đơn đã thanh toán) ──
-    await queryRunner.query(`
-      INSERT INTO tickets (id, order_id, ticket_type_id, ticket_code, qr_data, status, created_at, updated_at)
-      VALUES
-        ('10000000-0000-0000-0000-000000000001', 'd0000000-0000-0000-0000-000000000001',
-         'c0000000-0000-0000-0000-000000000001', 'TECH2026-STD-000001',
-         '{"ticketId":"10000000-0000-0000-0000-000000000001","event":"Tech Summit Vietnam 2026","type":"Tiêu Chuẩn","holder":"Nguyễn Thị Lan","code":"TECH2026-STD-000001"}',
-         'active', NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days'),
-
-        ('10000000-0000-0000-0000-000000000002', 'd0000000-0000-0000-0000-000000000001',
-         'c0000000-0000-0000-0000-000000000001', 'TECH2026-STD-000002',
-         '{"ticketId":"10000000-0000-0000-0000-000000000002","event":"Tech Summit Vietnam 2026","type":"Tiêu Chuẩn","holder":"Nguyễn Thị Lan","code":"TECH2026-STD-000002"}',
-         'active', NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days'),
-
-        ('10000000-0000-0000-0000-000000000003', 'd0000000-0000-0000-0000-000000000002',
-         'c0000000-0000-0000-0000-000000000002', 'TECH2026-VIP-000001',
-         '{"ticketId":"10000000-0000-0000-0000-000000000003","event":"Tech Summit Vietnam 2026","type":"VIP","holder":"Trần Văn Minh","code":"TECH2026-VIP-000001"}',
-         'active', NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days')
-      ON CONFLICT (ticket_code) DO NOTHING
-    `);
-
     // ── ORDER RESERVATIONS (1 reservation đang active) ──
     await queryRunner.query(`
       INSERT INTO order_reservations (id, user_id, ticket_type_id, quantity, unit_price, expires_at, status, created_at, updated_at)
@@ -251,18 +181,6 @@ export class SeedInitialData1773000000000 implements MigrationInterface {
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
       `DELETE FROM order_reservations WHERE id = '20000000-0000-0000-0000-000000000001'`,
-    );
-    await queryRunner.query(
-      `DELETE FROM tickets WHERE id IN ('10000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000002','10000000-0000-0000-0000-000000000003')`,
-    );
-    await queryRunner.query(
-      `DELETE FROM payments WHERE id IN ('b0000000-0000-0000-0000-000000000001','b0000000-0000-0000-0000-000000000002')`,
-    );
-    await queryRunner.query(
-      `DELETE FROM order_items WHERE id IN ('f0000000-0000-0000-0000-000000000001','f0000000-0000-0000-0000-000000000002','f0000000-0000-0000-0000-000000000003')`,
-    );
-    await queryRunner.query(
-      `DELETE FROM orders WHERE id IN ('d0000000-0000-0000-0000-000000000001','d0000000-0000-0000-0000-000000000002','d0000000-0000-0000-0000-000000000003')`,
     );
     await queryRunner.query(
       `DELETE FROM ticket_types WHERE id IN ('c0000000-0000-0000-0000-000000000001','c0000000-0000-0000-0000-000000000002','c0000000-0000-0000-0000-000000000003','c0000000-0000-0000-0000-000000000004','c0000000-0000-0000-0000-000000000005','c0000000-0000-0000-0000-000000000006','c0000000-0000-0000-0000-000000000007','c0000000-0000-0000-0000-000000000008')`,

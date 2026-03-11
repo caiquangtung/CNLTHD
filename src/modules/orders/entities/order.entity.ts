@@ -28,15 +28,33 @@ export class Order extends BaseEntity {
   })
   status: OrderStatus;
 
+  @Column({
+    name: 'payment_deadline',
+    type: 'timestamp',
+    nullable: false
+  })
+  paymentDeadline: Date;
+
+  @Column({
+    name: 'cancel_reason',
+    type: 'varchar',
+    nullable: true
+  })
+  cancelReason?: string;
+
   // Relationships
   @ManyToOne(() => User)
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @OneToMany(() => OrderItem, (orderItem) => orderItem.order)
+  @OneToMany(() => OrderItem, (orderItem) => orderItem.order, {
+    cascade: ['insert']
+  })
   orderItems: OrderItem[];
 
-  @OneToOne(() => Payment, (payment) => payment.order)
+  @OneToOne(() => Payment, (payment) => payment.order, {
+    cascade: ['insert'], // Tự động lưu Payment khi lưu Order
+  })
   payment: Payment;
 
   @OneToMany(() => Ticket, (ticket) => ticket.order)

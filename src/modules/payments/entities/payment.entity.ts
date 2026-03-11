@@ -3,17 +3,16 @@ import { BaseEntity } from '../../../common/entities';
 import { Order } from '../../orders/entities/order.entity';
 
 export enum PaymentMethod {
-  CREDIT_CARD = 'credit_card',
-  DEBIT_CARD = 'debit_card',
   BANK_TRANSFER = 'bank_transfer',
   E_WALLET = 'e_wallet',
-  CASH = 'cash',
 }
 
 export enum PaymentStatus {
   PENDING = 'pending',
   SUCCESS = 'success',
   FAILED = 'failed',
+  CANCELLED = 'cancelled',
+  EXPIRED = 'expired',
   REFUNDED = 'refunded',
 }
 
@@ -41,14 +40,14 @@ export class Payment extends BaseEntity {
   status: PaymentStatus;
 
   @Index('idx_payments_transaction_id')
-  @Column({ name: 'transaction_id', unique: true })
+  @Column({ name: 'transaction_id', unique: true, nullable: true })
   transactionId: string;
 
   @Column({ name: 'payment_time', type: 'timestamp', nullable: true })
   paymentTime: Date;
 
   // Relationships
-  @OneToOne(() => Order, (order) => order.payment)
+  @OneToOne(() => Order, (order) => order.payment, { cascade: ['insert'] })
   @JoinColumn({ name: 'order_id' })
   order: Order;
 }

@@ -10,24 +10,26 @@ export const getDatabaseConfig = (
   username: configService.get<string>('database.username'),
   password: configService.get<string>('database.password'),
   database: configService.get<string>('database.database'),
-  
+
   // Entities
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-  
+
   // Synchronize: CHỈ dùng trong development
   synchronize: configService.get<boolean>('database.synchronize') ?? false,
-  
+
   // Logging
   logging: configService.get<string>('nodeEnv') === 'development',
-  
+
   // Connection Pool (theo DATABASE_OPTIMIZATION.md)
   extra: {
-    max: 20,                      // Maximum connections
-    min: 5,                       // Minimum connections
-    idleTimeoutMillis: 30000,     // 30 seconds
+    max: 20, // Maximum connections
+    min: 5, // Minimum connections
+    idleTimeoutMillis: 30000, // 30 seconds
     connectionTimeoutMillis: 2000, // 2 seconds
+    // Set timezone cho mỗi connection
+    options: '-c timezone=Asia/Ho_Chi_Minh',
   },
-  
+
   // Migrations
   migrations: [__dirname + '/../database/migrations/**/*{.ts,.js}'],
   migrationsRun: false,

@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -13,6 +14,12 @@ import {
   mapCreateEventDtoToEntity,
   applyUpdateEventDtoToEntity,
 } from './mappers/event.mapper';
+import { UserRole } from '../users/entities/user.entity';
+
+interface CurrentUser {
+  id: string;
+  role: UserRole;
+}
 
 @Injectable()
 export class EventsService {
@@ -21,19 +28,26 @@ export class EventsService {
     private eventsRepo: Repository<Event>,
   ) {}
 
-  async create(dto: CreateEventDto): Promise<Event> {
+  async create(dto: CreateEventDto, organizerId: string): Promise<Event> {
     const existing = await this.eventsRepo.findOne({
       where: { slug: dto.slug },
     });
     if (existing) {
       throw new ConflictException('Event with this slug already exists');
     }
-    const event = mapCreateEventDtoToEntity(dto);
+    const event = mapCreateEventDtoToEntity(dto, organizerId);
     return this.eventsRepo.save(event);
   }
 
   async findAll(): Promise<Event[]> {
     return this.eventsRepo.find({ order: { startTime: 'ASC' } });
+  }
+
+  async findByOrganizer(organizerId: string): Promise<Event[]> {
+    return this.eventsRepo.find({
+      where: { organizerId },
+      order: { startTime: 'ASC' },
+    });
   }
 
   async findById(id: string): Promise<Event> {
@@ -52,8 +66,19 @@ export class EventsService {
     return event;
   }
 
-  async update(id: string, dto: UpdateEventDto): Promise<Event> {
+  async update(
+    id: string,
+    dto: UpdateEventDto,
+    currentUser: CurrentUser,
+  ): Promise<Event> {
     const event = await this.findById(id);
+
+    if (
+      currentUser.role !== UserRole.ADMIN &&
+      event.organizerId !== currentUser.id
+    ) {
+      throw new ForbiddenException('You are not allowed to update this event');
+    }
 
     const newSlug = dto.slug ?? event.slug;
     const slugChanged = dto.slug !== undefined && dto.slug !== event.slug;
@@ -73,8 +98,16 @@ export class EventsService {
     return this.eventsRepo.save(event);
   }
 
-  async softRemove(id: string): Promise<void> {
+  async softRemove(id: string, currentUser: CurrentUser): Promise<void> {
     const event = await this.findById(id);
+
+    if (
+      currentUser.role !== UserRole.ADMIN &&
+      event.organizerId !== currentUser.id
+    ) {
+      throw new ForbiddenException('You are not allowed to delete this event');
+    }
+
     await this.eventsRepo.softRemove(event);
   }
 
