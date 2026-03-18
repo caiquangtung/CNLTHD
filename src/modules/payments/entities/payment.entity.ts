@@ -3,11 +3,8 @@ import { BaseEntity } from '../../../common/entities';
 import { Order } from '../../orders/entities/order.entity';
 
 export enum PaymentMethod {
-  CREDIT_CARD = 'credit_card',
-  DEBIT_CARD = 'debit_card',
   BANK_TRANSFER = 'bank_transfer',
   E_WALLET = 'e_wallet',
-  CASH = 'cash',
 }
 
 export enum PaymentStatus {

@@ -16,7 +16,7 @@ export const getDatabaseConfig = (
 
   // Synchronize: CHỈ dùng trong development
   synchronize: configService.get<boolean>('database.synchronize') ?? false,
-  
+
   // Logging
   logging: configService.get<string>('nodeEnv') === 'development',
 
@@ -26,6 +26,8 @@ export const getDatabaseConfig = (
     min: 5, // Minimum connections
     idleTimeoutMillis: 30000, // 30 seconds
     connectionTimeoutMillis: 2000, // 2 seconds
+    // Set timezone cho mỗi connection
+    options: '-c timezone=Asia/Ho_Chi_Minh',
   },
 
   // Migrations
