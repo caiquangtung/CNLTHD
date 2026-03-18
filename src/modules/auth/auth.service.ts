@@ -10,46 +10,49 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
-    constructor(private usersService: UsersService, private jwtService: JwtService) {}
+  constructor(
+    private usersService: UsersService,
+    private jwtService: JwtService,
+  ) {}
 
-    async register(dto: RegisterDto): Promise<AuthResponseDto> {
-        const user = await this.usersService.createWithHashedPassword(dto);
-        const accessToken = this.generateToken(user);
-        return {
-            accessToken,
-            user: mapUserToResponseDto(user),
-        };
+  async register(dto: RegisterDto): Promise<AuthResponseDto> {
+    const user = await this.usersService.createWithHashedPassword(dto);
+    const accessToken = this.generateToken(user);
+    return {
+      accessToken,
+      user: mapUserToResponseDto(user),
+    };
+  }
+  async login(dto: LoginDto): Promise<AuthResponseDto> {
+    const user = await this.validateUser(dto.email, dto.password);
+
+    const accessToken = this.generateToken(user);
+    return {
+      accessToken,
+      user: mapUserToResponseDto(user),
+    };
+  }
+  async validateUser(email: string, password: string): Promise<User> {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
     }
-    async login(dto: LoginDto): Promise<AuthResponseDto> {
-        const user = await this.validateUser(dto.email, dto.password);
-        
-        const accessToken = this.generateToken(user);
-        return {
-            accessToken,
-            user: mapUserToResponseDto(user),
-        };
+    const isPasswordValid = await this.validateUserPassword(user, password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
     }
-    async validateUser(email: string, password: string): Promise<User> {
-        const user = await this.usersService.findByEmail(email);
-        if (!user) {
-            throw new UnauthorizedException('Invalid credentials');
-        }
-        const isPasswordValid = await this.validateUserPassword(user, password);
-        if (!isPasswordValid) {
-            throw new UnauthorizedException('Invalid credentials');
-        }
-        return user;
-    }
-    async validateUserPassword(user: User, password: string): Promise<boolean> {
-        return await bcrypt.compare(password, user.passwordHash);
-    }
-    private generateToken(user: User): string {
-        const payload = {
-          sub: user.id,
-          email: user.email,
-          role: user.role,
-        };
-    
-        return this.jwtService.sign(payload);
-      }
+    return user;
+  }
+  async validateUserPassword(user: User, password: string): Promise<boolean> {
+    return await bcrypt.compare(password, user.passwordHash);
+  }
+  private generateToken(user: User): string {
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    };
+
+    return this.jwtService.sign(payload);
+  }
 }
