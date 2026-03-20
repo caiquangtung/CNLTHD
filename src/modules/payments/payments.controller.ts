@@ -91,118 +91,6 @@ export class PaymentsController {
     }
 
     /**
-     * Momo return URL - Browser redirect sau khi user thanh toán xong
-     * Demo mode: Cập nhật DB ngay (production sẽ qua IPN)
-     * 
-     * POSITIONED BEFORE :id route to ensure proper matching
-     */
-    @Get('momo-return')
-    @Public()
-    @ApiOperation({ summary: 'Momo return redirect - Demo mode: Update DB directly' })
-    async momoReturn(
-        @Query() query: Record<string, string>,
-        @Res() res: Response,
-    ): Promise<void> {
-        const gateway = this.gatewayFactory.getGateway(PaymentMethod.E_WALLET);
-        const result = gateway.verifyCallback(query);
-        const frontendUrl = 'http://localhost:3001';
-
-        // 1. Kiểm tra chữ ký
-        if (!result.isValid) {
-            return res.redirect(`${frontendUrl}/payment-failed?orderId=${result.orderId}&reason=invalid_signature`);
-        }
-
-        // 2. Nếu thanh toán thành công
-        if (result.isSuccess) {
-            try {
-                const payment = await this.paymentsService.findByOrderId(result.orderId);
-
-                // ✅ Verify amount match (prevent hacking)
-                if (result.amount && result.amount !== Number(payment.amount)) {
-                    this.logger.error(`❌ Amount mismatch: ${result.amount} vs ${payment.amount}`);
-                    return res.redirect(`${frontendUrl}/payment-failed?reason=amount_mismatch`);
-                }
-
-                // ✅ Idempotency: chỉ update nếu PENDING
-                if (payment.status === PaymentStatus.PENDING) {
-                    await this.paymentsService.completePayment(payment.id, {
-                        transactionId: result.transactionId,
-                    });
-                    this.logger.log(`✅ [DEMO] Momo Payment ${payment.id} updated via gateway callback`);
-                }
-
-                return res.redirect(`${frontendUrl}/payment-success?orderId=${result.orderId}&transactionId=${result.transactionId}`);
-            } catch (error) {
-                this.logger.error(`❌ DB update error: ${error.message}`);
-                return res.redirect(`${frontendUrl}/payment-failed?orderId=${result.orderId}&reason=db_error`);
-            }
-        }
-
-        // 3. Trường hợp thanh toán thất bại
-        return res.redirect(`${frontendUrl}/payment-failed?orderId=${result.orderId}&reason=payment_failed`);
-    }
-
-    /**
-     * Momo IPN webhook (server-to-server callback)
-     * Production: Momo sẽ gọi endpoint này để thông báo kết quả thanh toán
-     */
-    @Post('momo-ipn')
-    @Public()
-    @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Momo IPN webhook' })
-    @ApiBody({ schema: { type: 'object' } })
-    @ApiResponse({ status: 200, description: 'IPN received' })
-    async momoIpn(
-        @Body() body: Record<string, any>,
-    ): Promise<any> {
-        this.logger.log(`Received Momo IPN: ${JSON.stringify(body)}`);
-
-        try {
-            const gateway = this.gatewayFactory.getGateway(PaymentMethod.E_WALLET);
-            const result = gateway.verifyCallback(body);
-
-            // 1. Kiểm tra chữ ký
-            if (!result.isValid) {
-                this.logger.warn(`❌ Invalid Momo signature: ${result.orderId}`);
-                return { resultCode: 1, message: 'Invalid signature' };
-            }
-
-            // 2. Nếu thanh toán thành công
-            if (result.isSuccess) {
-                try {
-                    const payment = await this.paymentsService.findByOrderId(result.orderId);
-
-                    // ✅ Verify amount match (prevent hacking)
-                    if (result.amount && result.amount !== Number(payment.amount)) {
-                        this.logger.error(`❌ Amount mismatch: ${result.amount} vs ${payment.amount}`);
-                        return { resultCode: 1, message: 'Amount mismatch' };
-                    }
-
-                    // ✅ Idempotency: chỉ update nếu PENDING
-                    if (payment.status === PaymentStatus.PENDING) {
-                        await this.paymentsService.completePayment(payment.id, {
-                            transactionId: result.transactionId,
-                        });
-                        this.logger.log(`✅ Momo Payment ${payment.id} updated via IPN`);
-                    }
-
-                    return { resultCode: 0, message: 'Success' };
-                } catch (error) {
-                    this.logger.error(`❌ DB update error: ${error.message}`);
-                    return { resultCode: 1, message: 'DB error' };
-                }
-            }
-
-            // 3. Trường hợp thanh toán thất bại
-            this.logger.warn(`❌ Momo payment failed for order ${result.orderId}`);
-            return { resultCode: 1, message: 'Payment failed' };
-        } catch (error) {
-            this.logger.error(`❌ Momo IPN error: ${error.message}`);
-            return { resultCode: 1, message: error.message };
-        }
-    }
-
-    /**
      * Get payment by Order ID
      */
     @Get('order/:orderId')
@@ -236,7 +124,7 @@ export class PaymentsController {
 
     /**
      * Complete payment (mark as SUCCESS and update order status to PAID)
-     * Dùng để test thủ công qua Swagger (không qua VNPay/Momo)
+     * Dùng để test thủ công qua Swagger (không qua VNPay)
      */
     @Patch(':id/complete')
     @Public()

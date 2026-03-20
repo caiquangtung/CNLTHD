@@ -89,15 +89,15 @@ export class OrdersService {
 
             order.totalAmount = totalAmount;
 
-            // Xử lý đặc biệt cho phương thức ONLINE
-            if (dto.paymentMethod === 'online') {
+            // Xử lý đặc biệt cho phương thức CASH
+            if (dto.paymentMethod === 'cash') {
                 order.status = OrderStatus.PAID;
                 order.paymentDeadline = new Date(Date.now() + this.paymentDeadlineMinutes * 60 * 1000);;
                 order.payment = manager.create(Payment, {
                     amount: totalAmount,
                     status: PaymentStatus.SUCCESS,
                     paymentMethod: dto.paymentMethod,
-                    transactionId: 'ONLINE-MOCK',
+                    transactionId: 'CASH-MOCK',
                 });
             } else {
                 order.status = OrderStatus.PENDING;
@@ -114,8 +114,8 @@ export class OrdersService {
             // 2. Map từ savedOrder (đã có ID từ DB)
             const responseDto = mapOrderToResponseDto(savedOrder);
 
-            // 3. Nếu không phải ONLINE thì gắn paymentUrl
-            if (dto.paymentMethod === 'online') {
+            // 3. Nếu không phải CASH thì gắn paymentUrl
+            if (dto.paymentMethod === 'cash') {
                 responseDto.paymentUrl = null;
             } else {
                 const gateway = this.paymentGatewayFactory.getGateway(dto.paymentMethod);
