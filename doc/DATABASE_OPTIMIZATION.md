@@ -226,7 +226,7 @@ CREATE TABLE payments (
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
 
   CONSTRAINT chk_payments_amount CHECK (amount >= 0),
-  CONSTRAINT chk_payments_method CHECK (payment_method IN ('MOMO', 'ZALOPAY', 'BANKING', 'CARD')),
+  CONSTRAINT chk_payments_method CHECK (payment_method IN ('BANK_TRANSFER', 'BANKING', 'CARD')),
   CONSTRAINT chk_payments_status CHECK (status IN ('PENDING', 'SUCCESS', 'FAILED')),
   CONSTRAINT fk_payments_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );

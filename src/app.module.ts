@@ -4,7 +4,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import configuration from './config/configuration';
 import vnpayConfig from './config/vnpay.config';
-import momoConfig from './config/momo.config';
 import { getDatabaseConfig } from './config/database.config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -24,7 +23,7 @@ import { TimezoneInterceptor } from './common/interceptors/timezone.interceptor'
     // Config Module - Global configuration
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [configuration, vnpayConfig, momoConfig],
+      load: [configuration, vnpayConfig],
       envFilePath: '.env',
     }),
 
