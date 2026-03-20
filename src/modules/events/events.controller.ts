@@ -1,3 +1,7 @@
+/**
+ * Controller Events – API /events.
+ * Tương ứng: ticket-types/ticket-types.controller.ts (route /ticket-types)
+ */
 import {
   Controller,
   Get,
@@ -41,6 +45,7 @@ export class EventsController {
     private readonly ticketTypesService: TicketTypesService,
   ) {}
 
+  /** Tương ứng ticket-types: POST /ticket-types */
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @Roles(UserRole.ADMIN, UserRole.ORGANIZER)
@@ -55,6 +60,7 @@ export class EventsController {
     return mapEventToResponseDto(event);
   }
 
+  /** Tương ứng ticket-types: GET /ticket-types */
   @Get()
   @Public()
   async findAll(): Promise<EventResponseDto[]> {
@@ -70,6 +76,7 @@ export class EventsController {
     return mapEventsToResponseDto(events);
   }
 
+  /** Tương ứng ticket-types: GET /ticket-types/deleted */
   @Get('deleted')
   @Roles(UserRole.ADMIN)
   async findAllWithDeleted(): Promise<EventResponseDto[]> {
@@ -77,6 +84,7 @@ export class EventsController {
     return mapEventsToResponseDto(events);
   }
 
+  /** Tương ứng ticket-types: GET /ticket-types/:id */
   @Get(':id')
   @Public()
   async findOne(
@@ -86,6 +94,7 @@ export class EventsController {
     return mapEventToResponseDto(event);
   }
 
+  /** Tương ứng ticket-types: GET /ticket-types/event/:eventId */
   @Get(':id/tickets')
   @Public()
   async findTicketsByEvent(
@@ -96,6 +105,7 @@ export class EventsController {
     return mapTicketTypesToResponseDto(ticketTypes);
   }
 
+  /** Tạo ticket type cho event – gọi ticket-types: POST /ticket-types (body + eventId) */
   @Post(':id/tickets')
   @HttpCode(HttpStatus.CREATED)
   @Roles(UserRole.ADMIN)
@@ -112,6 +122,7 @@ export class EventsController {
     return mapTicketTypeToResponseDto(ticketType);
   }
 
+  /** Tương ứng ticket-types: PATCH /ticket-types/:id */
   @Patch(':id')
   @Roles(UserRole.ADMIN, UserRole.ORGANIZER)
   async update(
@@ -127,6 +138,7 @@ export class EventsController {
     return mapEventToResponseDto(event);
   }
 
+  /** Tương ứng ticket-types: PATCH /ticket-types/:id/restore */
   @Patch(':id/restore')
   @Roles(UserRole.ADMIN)
   async restore(
@@ -136,6 +148,7 @@ export class EventsController {
     return mapEventToResponseDto(event);
   }
 
+  /** Tương ứng ticket-types: DELETE /ticket-types/:id */
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @Roles(UserRole.ADMIN, UserRole.ORGANIZER)
