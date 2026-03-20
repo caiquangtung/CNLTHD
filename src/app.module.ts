@@ -15,6 +15,7 @@ import { EventsModule } from './modules/events/events.module';
 import { TicketsModule } from './modules/tickets/tickets.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { BookingsModule } from './modules/bookings/bookings.module';
 import { OrderCronService } from './cron/order-cron.service';
 import { TimezoneInterceptor } from './common/interceptors/timezone.interceptor';
 
@@ -44,6 +45,7 @@ import { TimezoneInterceptor } from './common/interceptors/timezone.interceptor'
     EventsModule,
     OrdersModule,
     PaymentsModule,
+    BookingsModule,
   ],
   controllers: [AppController],
   providers: [

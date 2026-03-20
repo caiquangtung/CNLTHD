@@ -1,3 +1,7 @@
+/**
+ * Mapper cho Event: chuyển đổi giữa DTO và Entity.
+ * Tương ứng: ticket-types/mappers/ticket-type.mapper.ts
+ */
 import { plainToInstance } from 'class-transformer';
 import { Event } from '../entities/event.entity';
 import { CreateEventDto } from '../dto/create-event.dto';

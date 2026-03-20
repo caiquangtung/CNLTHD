@@ -9,9 +9,11 @@ import { map } from 'rxjs/operators';
 import { ApiResponse } from '../interfaces/api-response.interface';
 
 /**
- * Transform Response Interceptor
- * Wraps all successful responses in a standard format
- * Cũng format timestamps với timezone Vietnam (+07:00)
+ * Interceptor chuẩn hóa phản hồi HTTP.
+ *
+ * - Bọc mọi dữ liệu trả về của controller (events, ticket-types, users,...)
+ *   vào cùng một cấu trúc `ApiResponse<T>`.
+ * - Đồng thời chuẩn hóa toàn bộ thời gian về múi giờ Việt Nam (+07:00).
  */
 @Injectable()
 export class TransformResponseInterceptor<T>
@@ -26,7 +28,7 @@ export class TransformResponseInterceptor<T>
 
     return next.handle().pipe(
       map((data) => {
-        // Format tất cả timestamps trong data với timezone +07:00
+        // Chuẩn hóa toàn bộ thời gian trong dữ liệu về múi giờ +07:00
         const formattedData = this.formatTimestamps(data);
 
         return {
@@ -41,9 +43,7 @@ export class TransformResponseInterceptor<T>
     );
   }
 
-  /**
-   * Recursively format tất cả fields có Date type
-   */
+  /** Duyệt đệ quy và format mọi trường có kiểu Date. */
   private formatTimestamps(obj: any): any {
     if (!obj) return obj;
 
@@ -69,9 +69,8 @@ export class TransformResponseInterceptor<T>
   }
 
   /**
-   * Format Date sang string với timezone Vietnam (+07:00)
-   * Input: Date object (UTC internally)
-   * Output: "2026-03-10 15:30:00+07:00" (string)
+   * Chuyển đối tượng Date sang chuỗi theo múi giờ Việt Nam (+07:00).
+   * Ví dụ: "2026-03-10 15:30:00+07:00".
    */
   private formatDateWithTimezone(date: Date): string {
     const vietnamFormatter = new Intl.DateTimeFormat('vi-VN', {

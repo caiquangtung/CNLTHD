@@ -1,3 +1,7 @@
+/**
+ * DTO tạo event (validation input).
+ * Tương ứng: ticket-types/dto/create-ticket-type.dto.ts
+ */
 import {
   IsString,
   IsEnum,
