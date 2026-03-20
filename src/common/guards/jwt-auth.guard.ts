@@ -3,6 +3,13 @@ import { AuthGuard } from '@nestjs/passport';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
+/**
+ * Guard JWT cho toàn bộ API (trừ các route có `@Public()`).
+ *
+ * Được apply ở level controller, ví dụ:
+ * `@UseGuards(JwtAuthGuard, RolesGuard)` trong `EventsController`,
+ * `TicketTypesController`, đảm bảo chỉ user đã login mới truy cập được.
+ */
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
   constructor(private reflector: Reflector) {

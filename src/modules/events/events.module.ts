@@ -1,3 +1,7 @@
+/**
+ * Module Events – quản lý sự kiện.
+ * Tương ứng module: ticket-types/ticket-types.module.ts
+ */
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EventsService } from './events.service';
