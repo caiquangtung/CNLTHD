@@ -1,3 +1,7 @@
+/**
+ * Service Events – logic nghiệp vụ event (CRUD, soft delete, restore).
+ * Tương ứng: ticket-types/ticket-types.service.ts
+ */
 import {
   Injectable,
   NotFoundException,
@@ -28,6 +32,7 @@ export class EventsService {
     private eventsRepo: Repository<Event>,
   ) {}
 
+  /** Tương ứng ticket-types.service: create() */
   async create(dto: CreateEventDto, organizerId: string): Promise<Event> {
     const existing = await this.eventsRepo.findOne({
       where: { slug: dto.slug },
@@ -39,10 +44,12 @@ export class EventsService {
     return this.eventsRepo.save(event);
   }
 
+  /** Tương ứng ticket-types.service: findAll() */
   async findAll(): Promise<Event[]> {
     return this.eventsRepo.find({ order: { startTime: 'ASC' } });
   }
 
+  /** Tương ứng ticket-types.service: findByEvent() (events lọc theo organizerId) */
   async findByOrganizer(organizerId: string): Promise<Event[]> {
     return this.eventsRepo.find({
       where: { organizerId },
@@ -50,6 +57,7 @@ export class EventsService {
     });
   }
 
+  /** Tương ứng ticket-types.service: findById() */
   async findById(id: string): Promise<Event> {
     const event = await this.eventsRepo.findOne({ where: { id } });
     if (!event) {
@@ -66,6 +74,7 @@ export class EventsService {
     return event;
   }
 
+  /** Tương ứng ticket-types.service: update() (events thêm phân quyền organizer) */
   async update(
     id: string,
     dto: UpdateEventDto,
@@ -98,6 +107,7 @@ export class EventsService {
     return this.eventsRepo.save(event);
   }
 
+  /** Tương ứng ticket-types.service: softRemove() (events thêm phân quyền organizer) */
   async softRemove(id: string, currentUser: CurrentUser): Promise<void> {
     const event = await this.findById(id);
 
@@ -111,6 +121,7 @@ export class EventsService {
     await this.eventsRepo.softRemove(event);
   }
 
+  /** Tương ứng ticket-types.service: restore() */
   async restore(id: string): Promise<Event> {
     const event = await this.eventsRepo.findOne({
       where: { id },
@@ -129,6 +140,7 @@ export class EventsService {
     return this.findById(id);
   }
 
+  /** Tương ứng ticket-types.service: findAllWithDeleted() */
   async findAllWithDeleted(): Promise<Event[]> {
     return this.eventsRepo.find({
       withDeleted: true,

@@ -1,3 +1,7 @@
+/**
+ * Entity Event – model bảng events.
+ * Tương ứng: ticket-types/entities/ticket-type.entity.ts
+ */
 import {
   Entity,
   Column,

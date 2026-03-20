@@ -1,42 +1,43 @@
 /**
- * Standard API Response Interface
- * All API responses will follow this structure
+ * Kiểu dữ liệu chuẩn cho mọi phản hồi API.
+ *
+ * Được dùng bởi:
+ * - `TransformResponseInterceptor` cho phản hồi thành công (events, ticket-types,...)
+ * - `HttpExceptionFilter` / `AllExceptionsFilter` cho phản hồi lỗi.
  */
 export interface ApiResponse<T = any> {
   /**
-   * Indicates if the request was successful
+   * Cờ cho biết request thành công hay thất bại
    */
   success: boolean;
 
   /**
-   * Response data (null on error)
+   * Dữ liệu trả về (null nếu lỗi)
    */
   data: T | null;
 
   /**
-   * Error message (null on success)
+   * Thông báo lỗi (null nếu thành công)
    */
   message: string | null;
 
   /**
-   * HTTP status code
+   * Mã trạng thái HTTP
    */
   statusCode: number;
 
   /**
-   * Request timestamp
+   * Thời điểm tạo phản hồi
    */
   timestamp: string;
 
   /**
-   * Request path
+   * Đường dẫn request
    */
   path: string;
 }
 
-/**
- * Paginated response interface
- */
+/** Kiểu dữ liệu cho phản hồi có phân trang. */
 export interface PaginatedResponse<T = any> {
   items: T[];
   total: number;

@@ -8,6 +8,12 @@ import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { UserRole } from '../../modules/users/entities/user.entity';
 
+/**
+ * Guard kiểm tra quyền theo `@Roles(...)`.
+ *
+ * Được gắn cùng với `JwtAuthGuard` cho các controller như events/ticket-types
+ * để hạn chế các thao tác tạo/sửa/xóa chỉ cho ADMIN/ORGANIZER,...
+ */
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
