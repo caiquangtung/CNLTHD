@@ -21,6 +21,7 @@ import { TicketType } from '../ticket-types/entities';
 import { Payment, PaymentStatus } from '../payments/entities';
 import { PaymentGatewayFactory } from '../payments/gateways/payment-gateway.factory';
 import { OrderResponseDto } from './dto';
+import { PaymentsService } from '../payments/payments.service';
 
 const MAX_PENDING_ORDERS = 2;
 
@@ -37,6 +38,7 @@ export class OrdersService {
         @InjectDataSource() private dataSource: DataSource,
         private paymentGatewayFactory: PaymentGatewayFactory,
         private configService: ConfigService,
+        private paymentsService: PaymentsService,
     ) {
         this.paymentDeadlineMinutes = this.configService.get<number>('payment.timeout') || 5;
     }
@@ -56,8 +58,6 @@ export class OrdersService {
 
             const order = mapCreateOrderDtoToEntity(dto);
             order.userId = userId;
-            order.status = OrderStatus.PENDING;
-            order.paymentDeadline = new Date(Date.now() + this.paymentDeadlineMinutes * 60 * 1000);
 
             let totalAmount = 0;
 
@@ -89,26 +89,43 @@ export class OrdersService {
 
             order.totalAmount = totalAmount;
 
-            // Tạo Payment đính kèm
-            order.payment = manager.create(Payment, {
-                amount: totalAmount,
-                status: PaymentStatus.PENDING,
-                paymentMethod: dto.paymentMethod,
-            });
+            // Xử lý đặc biệt cho phương thức CASH
+            if (dto.paymentMethod === 'cash') {
+                order.status = OrderStatus.PAID;
+                order.paymentDeadline = new Date(Date.now() + this.paymentDeadlineMinutes * 60 * 1000);;
+                order.payment = manager.create(Payment, {
+                    amount: totalAmount,
+                    status: PaymentStatus.SUCCESS,
+                    paymentMethod: dto.paymentMethod,
+                    transactionId: 'CASH-MOCK',
+                });
+            } else {
+                order.status = OrderStatus.PENDING;
+                order.paymentDeadline = new Date(Date.now() + this.paymentDeadlineMinutes * 60 * 1000);
+                order.payment = manager.create(Payment, {
+                    amount: totalAmount,
+                    status: PaymentStatus.PENDING,
+                    paymentMethod: dto.paymentMethod,
+                });
+            }
 
             const savedOrder = await manager.save(order); // Lưu toàn bộ Order + Items + Payment
 
             // 2. Map từ savedOrder (đã có ID từ DB)
             const responseDto = mapOrderToResponseDto(savedOrder);
 
-            // 3. Gắn Payment URL (dùng factory để support nhiều payment method)
-            const gateway = this.paymentGatewayFactory.getGateway(dto.paymentMethod);
-            responseDto.paymentUrl = await gateway.buildPaymentUrl(
-                savedOrder.id,
-                Number(savedOrder.totalAmount),
-                `Thanhtoandonhang${savedOrder.id}`,
-                ipAddr || '127.0.0.1',
-            );
+            // 3. Nếu không phải CASH thì gắn paymentUrl
+            if (dto.paymentMethod === 'cash') {
+                responseDto.paymentUrl = null;
+            } else {
+                const gateway = this.paymentGatewayFactory.getGateway(dto.paymentMethod);
+                responseDto.paymentUrl = await gateway.buildPaymentUrl(
+                    savedOrder.id,
+                    Number(savedOrder.totalAmount),
+                    `Thanhtoandonhang${savedOrder.id}`,
+                    ipAddr || '127.0.0.1',
+                );
+            }
 
             return responseDto;
         });

@@ -4,7 +4,7 @@ import { Order } from '../../orders/entities/order.entity';
 
 export enum PaymentMethod {
   BANK_TRANSFER = 'bank_transfer',
-  E_WALLET = 'e_wallet',
+  CASH = 'cash',
 }
 
 export enum PaymentStatus {

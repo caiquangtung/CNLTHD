@@ -497,7 +497,6 @@ Thông tin thanh toán cho đơn hàng.
 
 **Payment Methods:**
 
-- `MOMO` - Ví MoMo
 - `ZALOPAY` - Ví ZaloPay
 - `BANKING` - Chuyển khoản ngân hàng
 - `CARD` - Thẻ tín dụng/ghi nợ
@@ -524,7 +523,7 @@ ALTER TABLE payments ADD CONSTRAINT chk_payments_amount
   CHECK (amount >= 0);
 
 ALTER TABLE payments ADD CONSTRAINT chk_payments_method
-  CHECK (payment_method IN ('MOMO', 'ZALOPAY', 'BANKING', 'CARD'));
+  CHECK (payment_method IN ('ZALOPAY', 'BANKING', 'CARD'));
 
 ALTER TABLE payments ADD CONSTRAINT chk_payments_status
   CHECK (status IN ('PENDING', 'SUCCESS', 'FAILED'));
@@ -539,8 +538,8 @@ ALTER TABLE payments ADD CONSTRAINT fk_payments_order
 {
   "id": "b50e8400-e29b-41d4-a716-446655440000",
   "order_id": "950e8400-e29b-41d4-a716-446655440000",
-  "transaction_id": "MOMO_TXN_123456789",
-  "payment_method": "MOMO",
+  "transaction_id": "VNPAY_TXN_123456789",
+  "payment_method": "BANKING",
   "amount": 1000000.0,
   "status": "SUCCESS",
   "payment_time": "2024-01-15T10:42:00Z",
