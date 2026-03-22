@@ -23,7 +23,7 @@ export class TicketTypesService {
 
   async create(dto: CreateTicketTypeDto): Promise<TicketType> {
     const existing = await this.ticketTypesRepo.findOne({
-      where: { eventId: dto.eventId, name: dto.name },
+      where: { eventId: dto.eventId, name: dto.name, deletedAt: null },
     });
     if (existing) {
       throw new ConflictException(
@@ -36,18 +36,23 @@ export class TicketTypesService {
   }
 
   async findAll(): Promise<TicketType[]> {
-    return this.ticketTypesRepo.find({ order: { createdAt: 'ASC' } });
+    return this.ticketTypesRepo.find({
+      where: { deletedAt: null },
+      order: { createdAt: 'ASC' },
+    });
   }
 
   async findByEvent(eventId: string): Promise<TicketType[]> {
     return this.ticketTypesRepo.find({
-      where: { eventId },
+      where: { eventId, deletedAt: null },
       order: { price: 'ASC' },
     });
   }
 
   async findById(id: string): Promise<TicketType> {
-    const ticketType = await this.ticketTypesRepo.findOne({ where: { id } });
+    const ticketType = await this.ticketTypesRepo.findOne({
+      where: { id, deletedAt: null },
+    });
     if (!ticketType) {
       throw new NotFoundException(`TicketType with id "${id}" not found`);
     }
@@ -65,7 +70,7 @@ export class TicketTypesService {
 
     if (nameChanged || eventChanged) {
       const conflict = await this.ticketTypesRepo.findOne({
-        where: { eventId: newEventId, name: newName },
+        where: { eventId: newEventId, name: newName, deletedAt: null },
       });
       if (conflict && conflict.id !== id) {
         throw new ConflictException(

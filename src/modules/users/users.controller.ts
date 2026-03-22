@@ -23,18 +23,6 @@ import {
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  /**
-   * NOTE: User creation is disabled here
-   * Users should be created through /auth/register endpoint only
-   * This ensures proper password hashing and validation
-   */
-  // @Post()
-  // @HttpCode(HttpStatus.CREATED)
-  // async create(@Body() createUserDto: CreateUserDto): Promise<UserResponseDto> {
-  //   const user = await this.usersService.createWithHashedPassword(createUserDto);
-  //   return mapUserToResponseDto(user);
-  // }
-
   @Get()
   async findAll(): Promise<UserResponseDto[]> {
     const users = await this.usersService.findAllWithDeleted();

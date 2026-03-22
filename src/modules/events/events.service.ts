@@ -46,20 +46,25 @@ export class EventsService {
 
   /** Tương ứng ticket-types.service: findAll() */
   async findAll(): Promise<Event[]> {
-    return this.eventsRepo.find({ order: { startTime: 'ASC' } });
+    return this.eventsRepo.find({
+      where: { deletedAt: null },
+      order: { startTime: 'ASC' },
+    });
   }
 
   /** Tương ứng ticket-types.service: findByEvent() (events lọc theo organizerId) */
   async findByOrganizer(organizerId: string): Promise<Event[]> {
     return this.eventsRepo.find({
-      where: { organizerId },
+      where: { organizerId, deletedAt: null },
       order: { startTime: 'ASC' },
     });
   }
 
   /** Tương ứng ticket-types.service: findById() */
   async findById(id: string): Promise<Event> {
-    const event = await this.eventsRepo.findOne({ where: { id } });
+    const event = await this.eventsRepo.findOne({
+      where: { id, deletedAt: null },
+    });
     if (!event) {
       throw new NotFoundException(`Event with id "${id}" not found`);
     }
