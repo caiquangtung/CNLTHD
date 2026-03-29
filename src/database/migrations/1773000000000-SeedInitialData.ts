@@ -74,7 +74,7 @@ export class SeedInitialData1773000000000 implements MigrationInterface {
           NOW() + INTERVAL '90 days',
           NOW() + INTERVAL '91 days',
           'published',
-          'a0000000-0000-0000-0000-000000000001',
+          (SELECT id FROM users WHERE email = 'admin@eventbooking.com' LIMIT 1),
           NOW() - INTERVAL '20 days',
           NOW() - INTERVAL '5 days'
         ),
@@ -87,7 +87,7 @@ export class SeedInitialData1773000000000 implements MigrationInterface {
           NOW() + INTERVAL '120 days',
           NOW() + INTERVAL '120 days' + INTERVAL '8 hours',
           'published',
-          'a0000000-0000-0000-0000-000000000002',
+          (SELECT id FROM users WHERE email = 'nguyen.thi.lan@gmail.com' LIMIT 1),
           NOW() - INTERVAL '15 days',
           NOW() - INTERVAL '3 days'
         ),
@@ -100,7 +100,7 @@ export class SeedInitialData1773000000000 implements MigrationInterface {
           NOW() + INTERVAL '45 days',
           NOW() + INTERVAL '45 days' + INTERVAL '6 hours',
           'draft',
-          'a0000000-0000-0000-0000-000000000005',
+          (SELECT id FROM users WHERE email = 'le.van.organizer@gmail.com' LIMIT 1),
           NOW() - INTERVAL '5 days',
           NOW() - INTERVAL '1 day'
         ),
@@ -113,7 +113,7 @@ export class SeedInitialData1773000000000 implements MigrationInterface {
           NOW() + INTERVAL '20 days',
           NOW() + INTERVAL '20 days' + INTERVAL '4 hours',
           'cancelled',
-          'a0000000-0000-0000-0000-000000000001',
+          (SELECT id FROM users WHERE email = 'admin@eventbooking.com' LIMIT 1),
           NOW() - INTERVAL '40 days',
           NOW() - INTERVAL '2 days'
         )
@@ -170,10 +170,17 @@ export class SeedInitialData1773000000000 implements MigrationInterface {
     await queryRunner.query(`
       INSERT INTO order_reservations (id, user_id, ticket_type_id, quantity, unit_price, expires_at, status, created_at, updated_at)
       VALUES
-        ('20000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000004',
-         'c0000000-0000-0000-0000-000000000004', 2, 299000,
-         NOW() + INTERVAL '10 minutes', 'active',
-         NOW() - INTERVAL '5 minutes', NOW() - INTERVAL '5 minutes')
+        (
+         '20000000-0000-0000-0000-000000000001',
+         (SELECT id FROM users WHERE email = 'pham.thi.hoa@gmail.com' LIMIT 1),
+         'c0000000-0000-0000-0000-000000000004',
+         2,
+         299000,
+         NOW() + INTERVAL '10 minutes',
+         'active',
+         NOW() - INTERVAL '5 minutes',
+         NOW() - INTERVAL '5 minutes'
+        )
       ON CONFLICT DO NOTHING
     `);
   }

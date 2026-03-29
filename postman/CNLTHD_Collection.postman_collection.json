@@ -31,7 +31,7 @@
     },
     {
       "key": "eventId",
-      "value": "",
+      "value": "e0000000-0000-0000-0000-000000000001",
       "type": "string",
       "description": "UUID của event — tự động set sau khi tạo Event"
     },
@@ -58,9 +58,187 @@
       "value": "d0000000-0000-0000-0000-000000000001",
       "type": "string",
       "description": "UUID đơn hàng — seed: d0000000-0000-0000-0000-000000000001"
+    },
+    {
+      "key": "paymentId",
+      "value": "",
+      "type": "string",
+      "description": "UUID của payment — tự động set sau khi tạo đơn"
+    },
+    {
+      "key": "paymentUrl",
+      "value": "",
+      "type": "string",
+      "description": "URL thanh toán trả về từ gateway (VNPay) — lưu để mở trong browser nếu cần"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT token cho role admin (Parallel Auth State)"
+    },
+    {
+      "key": "orgToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT token cho role organizer (Parallel Auth State)"
+    },
+    {
+      "key": "userToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT token cho role user (Parallel Auth State)"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const seedEventId = 'e0000000-0000-0000-0000-000000000001';",
+          "const seedTicketTypeId = 'c0000000-0000-0000-0000-000000000001';",
+          "const seedOrderId = 'd0000000-0000-0000-0000-000000000001';",
+          "const resolvedEventId = pm.environment.get('eventId') || pm.collectionVariables.get('eventId') || seedEventId;",
+          "const resolvedTicketTypeId = pm.environment.get('ticketTypeId') || pm.collectionVariables.get('ticketTypeId') || seedTicketTypeId;",
+          "const resolvedOrderId = pm.environment.get('orderId') || pm.collectionVariables.get('orderId') || seedOrderId;",
+          "const resolvedAdminToken = pm.environment.get('adminToken') || pm.collectionVariables.get('adminToken') || pm.environment.get('adminAccessToken') || pm.collectionVariables.get('adminAccessToken') || '';",
+          "const resolvedUserToken = pm.environment.get('userToken') || pm.collectionVariables.get('userToken') || pm.environment.get('accessToken') || pm.collectionVariables.get('accessToken') || '';",
+          "const resolvedOrgToken = pm.environment.get('orgToken') || pm.collectionVariables.get('orgToken') || '';",
+          "if (!pm.environment.get('eventId')) pm.environment.set('eventId', resolvedEventId);",
+          "if (!pm.collectionVariables.get('eventId')) pm.collectionVariables.set('eventId', resolvedEventId);",
+          "if (!pm.environment.get('ticketTypeId')) pm.environment.set('ticketTypeId', resolvedTicketTypeId);",
+          "if (!pm.collectionVariables.get('ticketTypeId')) pm.collectionVariables.set('ticketTypeId', resolvedTicketTypeId);",
+          "if (!pm.environment.get('orderId')) pm.environment.set('orderId', resolvedOrderId);",
+          "if (!pm.collectionVariables.get('orderId')) pm.collectionVariables.set('orderId', resolvedOrderId);",
+          "if (resolvedAdminToken) { pm.environment.set('adminToken', resolvedAdminToken); pm.collectionVariables.set('adminToken', resolvedAdminToken); }",
+          "if (resolvedUserToken) { pm.environment.set('userToken', resolvedUserToken); pm.collectionVariables.set('userToken', resolvedUserToken); }",
+          "if (resolvedOrgToken) { pm.environment.set('orgToken', resolvedOrgToken); pm.collectionVariables.set('orgToken', resolvedOrgToken); }"
+        ]
+      }
     }
   ],
   "item": [
+    {
+      "name": "Auth Bootstrap (Parallel Tokens)",
+      "description": "Chạy folder này trước để nạp đủ 3 token: adminToken, orgToken, userToken.",
+      "item": [
+        {
+          "name": "Login Admin -> set adminToken",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@eventbooking.com\",\n  \"password\": \"Admin1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json().data;",
+                  "if (data && data.accessToken) {",
+                  "  pm.environment.set('adminToken', data.accessToken);",
+                  "  pm.collectionVariables.set('adminToken', data.accessToken);",
+                  "  console.log('adminToken set');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Organizer -> set orgToken",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"le.van.organizer@gmail.com\",\n  \"password\": \"Org1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json().data;",
+                  "if (data && data.accessToken) {",
+                  "  pm.environment.set('orgToken', data.accessToken);",
+                  "  pm.collectionVariables.set('orgToken', data.accessToken);",
+                  "  console.log('orgToken set');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login User -> set userToken",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nguyen.thi.lan@gmail.com\",\n  \"password\": \"User1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json().data;",
+                  "if (data && data.accessToken) {",
+                  "  pm.environment.set('userToken', data.accessToken);",
+                  "  pm.collectionVariables.set('userToken', data.accessToken);",
+                  "  console.log('userToken set');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
     {
       "name": "Health Check",
       "item": [
@@ -143,7 +321,9 @@
                   "const data = pm.response.json().data;",
                   "if (data && data.accessToken) {",
                   "    pm.collectionVariables.set('accessToken', data.accessToken);",
+                  "    pm.environment.set('accessToken', data.accessToken);",
                   "    pm.collectionVariables.set('userId', data.user.id);",
+                  "    pm.environment.set('userId', data.user.id);",
                   "    console.log('accessToken saved:', data.accessToken.substring(0, 20) + '...');",
                   "    console.log('userId saved:', data.user.id);",
                   "}"
@@ -229,7 +409,11 @@
                   "const data = pm.response.json().data;",
                   "if (data && data.accessToken) {",
                   "    pm.collectionVariables.set('accessToken', data.accessToken);",
+                  "    pm.collectionVariables.set('userToken', data.accessToken);",
+                  "    pm.environment.set('userToken', data.accessToken);",
+                  "    pm.environment.set('accessToken', data.accessToken);",
                   "    pm.collectionVariables.set('userId', data.user.id);",
+                  "    pm.environment.set('userId', data.user.id);",
                   "    console.log('accessToken saved');",
                   "}"
                 ],
@@ -269,7 +453,11 @@
                   "const data = pm.response.json().data;",
                   "if (data && data.accessToken) {",
                   "    pm.collectionVariables.set('adminAccessToken', data.accessToken);",
+                  "    pm.collectionVariables.set('adminToken', data.accessToken);",
+                  "    pm.environment.set('adminToken', data.accessToken);",
+                  "    pm.environment.set('adminAccessToken', data.accessToken);",
                   "    pm.collectionVariables.set('accessToken', data.accessToken);",
+                  "    pm.environment.set('accessToken', data.accessToken);",
                   "    console.log('Admin token saved. Role:', data.user.role);",
                   "    if (data.user.role !== 'admin') {",
                   "        console.warn('WARNING: User role is not admin! Run SQL to upgrade.');",
@@ -285,7 +473,12 @@
           "name": "POST /auth/login - Organizer",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"le.van.organizer@gmail.com\",\n  \"password\": \"Org1234\"\n}"
@@ -307,7 +500,11 @@
                   "const data = pm.response.json().data;",
                   "if (data && data.accessToken) {",
                   "    pm.collectionVariables.set('accessToken', data.accessToken);",
+                  "    pm.collectionVariables.set('orgToken', data.accessToken);",
+                  "    pm.environment.set('orgToken', data.accessToken);",
+                  "    pm.environment.set('accessToken', data.accessToken);",
                   "    pm.collectionVariables.set('userId', data.user.id);",
+                  "    pm.environment.set('userId', data.user.id);",
                   "    console.log('Organizer token saved. Role:', data.user.role);",
                   "    pm.test('Role is organizer', () => pm.expect(data.user.role).to.equal('organizer'));",
                   "}"
@@ -608,7 +805,7 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
+                "value": "Bearer {{adminToken}}"
               }
             ],
             "body": {
@@ -665,7 +862,7 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
+                "value": "Bearer {{adminToken}}"
               }
             ],
             "body": {
@@ -701,8 +898,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{orgToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -742,8 +945,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -778,8 +987,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -848,8 +1063,14 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -926,7 +1147,10 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/events/my-events",
@@ -991,7 +1215,10 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/events/my-events",
@@ -1025,7 +1252,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
+                "value": "Bearer {{adminToken}}"
               }
             ],
             "url": {
@@ -1117,8 +1344,14 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1154,8 +1387,14 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{orgToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1197,7 +1436,7 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
+                "value": "Bearer {{adminToken}}"
               }
             ],
             "body": {
@@ -1233,7 +1472,10 @@
           "request": {
             "method": "DELETE",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{orgToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/events/{{eventId}}",
@@ -1260,7 +1502,10 @@
           "request": {
             "method": "DELETE",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/events/{{eventId}}",
@@ -1289,7 +1534,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
+                "value": "Bearer {{adminToken}}"
               }
             ],
             "url": {
@@ -1333,7 +1578,7 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
+                "value": "Bearer {{adminToken}}"
               }
             ],
             "body": {
@@ -1390,7 +1635,7 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
+                "value": "Bearer {{adminToken}}"
               }
             ],
             "body": {
@@ -1421,7 +1666,12 @@
           "name": "POST /ticket-types - Không có token (expect 401)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"name\": \"Vé Test\",\n  \"description\": \"Test\",\n  \"price\": 100000,\n  \"quantity\": 100\n}"
@@ -1451,8 +1701,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1493,7 +1749,7 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
+                "value": "Bearer {{adminToken}}"
               }
             ],
             "body": {
@@ -1561,7 +1817,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
+                "value": "Bearer {{adminToken}}"
               }
             ],
             "url": {
@@ -1684,7 +1940,12 @@
           "name": "PATCH /ticket-types/:id - Không có token (expect 401)",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"price\": 999000\n}"
@@ -1714,8 +1975,14 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1752,7 +2019,7 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
+                "value": "Bearer {{adminToken}}"
               }
             ],
             "body": {
@@ -1816,7 +2083,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
+                "value": "Bearer {{adminToken}}"
               }
             ],
             "url": {
@@ -1846,7 +2113,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
+                "value": "Bearer {{adminToken}}"
               }
             ],
             "url": {
@@ -1890,7 +2157,7 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
+                "value": "Bearer {{adminToken}}"
               }
             ],
             "body": {
@@ -1932,7 +2199,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
+                "value": "Bearer {{adminToken}}"
               }
             ],
             "url": {
@@ -1968,7 +2235,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
+                "value": "Bearer {{adminToken}}"
               }
             ],
             "url": {
@@ -1998,7 +2265,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
+                "value": "Bearer {{userToken}}"
               }
             ],
             "url": {
@@ -2030,13 +2297,17 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
+                "value": "Bearer {{adminToken}}"
               }
             ],
             "url": {
               "raw": "{{baseUrl}}/tickets/order/d0000000-0000-0000-0000-000000000001",
               "host": ["{{baseUrl}}"],
-              "path": ["tickets", "order", "d0000000-0000-0000-0000-000000000001"]
+              "path": [
+                "tickets",
+                "order",
+                "d0000000-0000-0000-0000-000000000001"
+              ]
             },
             "description": "Lấy tickets theo `orderId`. **Yêu cầu role admin hoặc organizer.**\n\nSeed orderId: d0000000-0000-0000-0000-000000000001"
           },
@@ -2065,7 +2336,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
+                "value": "Bearer {{userToken}}"
               }
             ],
             "url": {
@@ -2097,7 +2368,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
+                "value": "Bearer {{adminToken}}"
               }
             ],
             "url": {
@@ -2132,7 +2403,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
+                "value": "Bearer {{userToken}}"
               }
             ],
             "url": {
@@ -2173,7 +2444,7 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
+                "value": "Bearer {{adminToken}}"
               }
             ],
             "body": {
@@ -2207,7 +2478,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
+                "value": "Bearer {{adminToken}}"
               }
             ],
             "url": {
@@ -2239,7 +2510,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
+                "value": "Bearer {{adminToken}}"
               }
             ],
             "url": {
@@ -2271,7 +2542,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
+                "value": "Bearer {{adminToken}}"
               }
             ],
             "url": {
@@ -2301,7 +2572,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
+                "value": "Bearer {{adminToken}}"
               }
             ],
             "url": {
@@ -2334,7 +2605,12 @@
           "name": "1. Register user thường",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"testuser_{{$timestamp}}@example.com\",\n  \"password\": \"TestUser123\",\n  \"fullName\": \"Test User\"\n}"
@@ -2354,7 +2630,9 @@
                   "pm.test('Register: Status 201', () => pm.response.to.have.status(201));",
                   "const data = pm.response.json().data;",
                   "pm.collectionVariables.set('accessToken', data.accessToken);",
+                  "pm.environment.set('accessToken', data.accessToken);",
                   "pm.collectionVariables.set('userId', data.user.id);",
+                  "pm.environment.set('userId', data.user.id);",
                   "console.log('[E2E] Step 1: User registered:', data.user.email);"
                 ],
                 "type": "text/javascript"
@@ -2366,7 +2644,12 @@
           "name": "2. Login Admin (cần nâng role trước)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"Admin1234\"\n}"
@@ -2401,8 +2684,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -2435,8 +2724,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -2469,8 +2764,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -2501,7 +2802,10 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/events/my-events",
@@ -2586,8 +2890,14 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -2618,7 +2928,10 @@
           "request": {
             "method": "DELETE",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/ticket-types/{{ticketTypeId}}",
@@ -2645,7 +2958,10 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/ticket-types/{{ticketTypeId}}/restore",
@@ -2661,6 +2977,288 @@
                 "exec": [
                   "pm.test('Restore TicketType: Status 200', () => pm.response.to.have.status(200));",
                   "console.log('[E2E] Step 11: TicketType restored. E2E flow completed!');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Orders & Payments",
+      "description": "Endpoints for creating orders, checking payments and payment callbacks (VNPay demo).",
+      "item": [
+        {
+          "name": "POST /orders - Create order (user)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderItems\": [{ \"ticketTypeId\": \"{{ticketTypeId}}\", \"quantity\": 1 }],\n  \"paymentMethod\": \"bank_transfer\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201 or 200', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "const body = pm.response.json();",
+                  "pm.test('Response success', () => pm.expect(body.success).to.be.true);",
+                  "if (body.data && body.data.id) {",
+                  "  pm.collectionVariables.set('orderId', body.data.id);",
+                  "}",
+                  "if (body.data && body.data.paymentUrl) {",
+                  "  pm.collectionVariables.set('paymentUrl', body.data.paymentUrl);",
+                  "  console.log('paymentUrl saved:', body.data.paymentUrl);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /orders - List orders (public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /orders/my-orders - Current user orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/my-orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "my-orders"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json().data; if (data && data.length>0) pm.collectionVariables.set('orderId', data[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /orders/:id/cancel - Cancel order",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "{{orderId}}", "cancel"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 or 204', () => pm.expect(pm.response.code).to.be.oneOf([200,204]));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /orders/:id - Get order (admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "{{orderId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json(); if (body.data && body.data.payment) pm.collectionVariables.set('paymentId', body.data.payment.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /payments/order/:orderId - Get payment by order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/payments/order/{{orderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["payments", "order", "{{orderId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json(); if (body.data && body.data.id) pm.collectionVariables.set('paymentId', body.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /payments/:id/complete - Complete payment (test)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"transactionId\": \"TX-{{$timestamp}}\" }"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payments/{{paymentId}}/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["payments", "{{paymentId}}", "complete"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /payments/:id/refund - Refund payment",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/payments/{{paymentId}}/refund",
+              "host": ["{{baseUrl}}"],
+              "path": ["payments", "{{paymentId}}", "refund"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /payments/vnpay-return - Simulate VNPay return (demo)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/payments/vnpay-return?vnp_TxnRef={{orderId}}&vnp_Amount=10000&vnp_TransactionNo=TX123&vnp_SecureHash=FAKE",
+              "host": ["{{baseUrl}}"],
+              "path": ["payments", "vnpay-return"],
+              "query": [
+                {
+                  "key": "vnp_TxnRef",
+                  "value": "{{orderId}}"
+                },
+                {
+                  "key": "vnp_Amount",
+                  "value": "10000"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('VNPay return: returns 302/redirect', () => pm.expect(pm.response.code).to.be.oneOf([302,200]));"
                 ],
                 "type": "text/javascript"
               }
