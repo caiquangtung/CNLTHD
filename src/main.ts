@@ -4,10 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { TransformResponseInterceptor } from './common/interceptors';
-import {
-  HttpExceptionFilter,
-  AllExceptionsFilter,
-} from './common/filters';
+import { HttpExceptionFilter, AllExceptionsFilter } from './common/filters';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -43,16 +40,26 @@ async function bootstrap() {
   // Global Exception Filters (catches all errors and formats them)
   app.useGlobalFilters(
     new AllExceptionsFilter(), // Catch-all for unhandled errors
-    new HttpExceptionFilter(),  // HTTP exceptions
+    new HttpExceptionFilter(), // HTTP exceptions
   );
 
   // Swagger Documentation
   if (configService.get<boolean>('swagger.enabled')) {
     const config = new DocumentBuilder()
       .setTitle('Event Booking API')
-      .setDescription('API for Event Booking System - NestJS + TypeORM + PostgreSQL')
+      .setDescription(
+        'API for Event Booking System - NestJS + TypeORM + PostgreSQL',
+      )
       .setVersion('1.0')
-      .addBearerAuth()
+      .addBearerAuth(
+        {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+          description: 'Nhap JWT token',
+        },
+        'access-token',
+      )
       .addTag('auth', 'Authentication endpoints')
       .addTag('users', 'User management')
       .addTag('events', 'Event management')
@@ -61,14 +68,19 @@ async function bootstrap() {
 
     const document = SwaggerModule.createDocument(app, config);
     const swaggerPath = configService.get<string>('swagger.path');
-    SwaggerModule.setup(swaggerPath, app, document);
+    SwaggerModule.setup(swaggerPath, app, document, {
+      swaggerOptions: {
+        persistAuthorization: true,
+      },
+    });
   }
 
   await app.listen(port);
 
   console.log('\n🚀 ========================================');
   console.log(`🎯 Application is running on: http://localhost:${port}/api`);
-  console.log(`📚 Swagger docs: http://localhost:${port}/api/docs`);
+  const swaggerPath = configService.get<string>('swagger.path') || 'api/docs';
+  console.log(`📚 Swagger docs: http://localhost:${port}/${swaggerPath}`);
   console.log(`🌍 Environment: ${configService.get<string>('nodeEnv')}`);
   console.log('========================================\n');
 }

@@ -28,7 +28,10 @@ export default () => ({
   },
 
   swagger: {
-    enabled: process.env.API_DOCS_ENABLED === 'true',
+    enabled:
+      process.env.API_DOCS_ENABLED !== undefined
+        ? process.env.API_DOCS_ENABLED === 'true'
+        : (process.env.NODE_ENV || 'development') !== 'production',
     path: process.env.API_DOCS_PATH || 'api/docs',
   },
 });
