@@ -21,7 +21,7 @@ import {
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @Get()
   async findAll(): Promise<UserResponseDto[]> {
@@ -30,9 +30,7 @@ export class UsersController {
   }
 
   @Get(':id')
-  async findOne(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<UserResponseDto> {
+  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<UserResponseDto> {
     const user = await this.usersService.findById(id);
     return mapUserToResponseDto(user);
   }

@@ -27,8 +27,5 @@ export class OrderResponseDto {
 
     @Exclude()
     paymentDeadline: Date;
-
-    @Expose()
-    paymentUrl: string;
 }
 

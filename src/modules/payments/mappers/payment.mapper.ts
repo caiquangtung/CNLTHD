@@ -1,9 +1,9 @@
-import { plainToClass } from 'class-transformer';
+import { plainToInstance } from 'class-transformer';
 import { Payment } from '../entities/payment.entity';
 import { PaymentResponseDto } from '../dto/payment-response.dto';
 
 export function mapPaymentToResponseDto(payment: Payment): PaymentResponseDto {
-    return plainToClass(PaymentResponseDto, payment, {
+    return plainToInstance(PaymentResponseDto, payment, {
         excludeExtraneousValues: true,
     });
 }
