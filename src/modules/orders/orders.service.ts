@@ -4,7 +4,6 @@ import {
     BadRequestException,
     ForbiddenException,
     Logger,
-    Inject,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
@@ -14,14 +13,11 @@ import { OrderItem } from './entities/order-item.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import {
     mapCreateOrderDtoToEntity,
-    mapCreateOrderItemDtoToEntity,
-    mapOrderToResponseDto,
 } from './mappers/order.mapper';
 import { TicketType } from '../ticket-types/entities';
 import { Payment, PaymentStatus } from '../payments/entities';
-import { PaymentGatewayFactory } from '../payments/gateways/payment-gateway.factory';
-import { OrderResponseDto } from './dto';
-import { PaymentsService } from '../payments/payments.service';
+import { Ticket } from '../tickets/entities/ticket.entity';
+import { PaginatedResponse } from 'src/common';
 
 const MAX_PENDING_ORDERS = 2;
 
@@ -33,17 +29,13 @@ export class OrdersService {
     constructor(
         @InjectRepository(Order)
         private ordersRepo: Repository<Order>,
-        @InjectRepository(OrderItem)
-        private orderItemsRepo: Repository<OrderItem>,
         @InjectDataSource() private dataSource: DataSource,
-        private paymentGatewayFactory: PaymentGatewayFactory,
         private configService: ConfigService,
-        private paymentsService: PaymentsService,
     ) {
         this.paymentDeadlineMinutes = this.configService.get<number>('payment.timeout') || 5;
     }
 
-    async create(dto: CreateOrderDto, userId: string, ipAddr?: string): Promise<OrderResponseDto> {
+    async create(dto: CreateOrderDto, userId: string): Promise<Order> {
         return await this.dataSource.transaction(async (manager) => {
             // 1. Check PENDING count bên trong transaction để an toàn tuyệt đối
             const pendingCount = await manager.count(Order, {
@@ -59,29 +51,38 @@ export class OrdersService {
             const order = mapCreateOrderDtoToEntity(dto);
             order.userId = userId;
 
+            const uniqueTicketTypeIds = new Set(order.orderItems.map((item) => item.ticketTypeId));
+            if (uniqueTicketTypeIds.size !== order.orderItems.length) {
+                throw new BadRequestException('Không được chọn trùng loại vé trong cùng một đơn hàng');
+            }
+
             let totalAmount = 0;
 
             for (const item of order.orderItems) {
-                // Lock dòng này lại để không ai khác có thể trừ kho cùng lúc
                 const ticketType = await manager.findOne(TicketType, {
                     where: { id: item.ticketTypeId },
-                    lock: { mode: 'pessimistic_write' }
                 });
 
                 if (!ticketType) throw new NotFoundException(`Loại vé không tồn tại`);
-
-                // Kiểm tra số lượng còn lại
-                if (ticketType.quantity < item.quantity) {
-                    throw new BadRequestException(`Vé ${ticketType.name} không đủ số lượng (còn ${ticketType.quantity})`);
-                }
 
                 if (item.quantity > ticketType.maxPerOrder) {
                     throw new BadRequestException(`Vé ${ticketType.name} chỉ được mua tối đa ${ticketType.maxPerOrder} vé mỗi đơn hàng`);
                 }
 
-                // Trừ kho
-                ticketType.quantity -= item.quantity;
-                await manager.save(ticketType);
+                // Trừ kho theo kiểu atomic để tránh race condition gây oversell.
+                const decrementResult = await manager
+                    .createQueryBuilder()
+                    .update(TicketType)
+                    .set({
+                        quantity: () => `quantity - ${item.quantity}`,
+                    })
+                    .where('id = :ticketTypeId', { ticketTypeId: item.ticketTypeId })
+                    .andWhere('quantity >= :requestedQty', { requestedQty: item.quantity })
+                    .execute();
+
+                if (!decrementResult.affected) {
+                    throw new BadRequestException(`Vé ${ticketType.name} không đủ số lượng`);
+                }
 
                 item.unitPrice = ticketType.price;
                 totalAmount += Number(ticketType.price) * item.quantity;
@@ -99,35 +100,19 @@ export class OrdersService {
                     paymentMethod: dto.paymentMethod,
                     transactionId: 'CASH-MOCK',
                 });
-            } else {
+            } else if (dto.paymentMethod === 'bank_transfer') {
                 order.status = OrderStatus.PENDING;
                 order.paymentDeadline = new Date(Date.now() + this.paymentDeadlineMinutes * 60 * 1000);
                 order.payment = manager.create(Payment, {
                     amount: totalAmount,
                     status: PaymentStatus.PENDING,
                     paymentMethod: dto.paymentMethod,
+                    transactionId: "BANK-TRANSFER-MOCK",
                 });
             }
 
             const savedOrder = await manager.save(order); // Lưu toàn bộ Order + Items + Payment
-
-            // 2. Map từ savedOrder (đã có ID từ DB)
-            const responseDto = mapOrderToResponseDto(savedOrder);
-
-            // 3. Nếu không phải CASH thì gắn paymentUrl
-            if (dto.paymentMethod === 'cash') {
-                responseDto.paymentUrl = null;
-            } else {
-                const gateway = this.paymentGatewayFactory.getGateway(dto.paymentMethod);
-                responseDto.paymentUrl = await gateway.buildPaymentUrl(
-                    savedOrder.id,
-                    Number(savedOrder.totalAmount),
-                    `Thanhtoandonhang${savedOrder.id}`,
-                    ipAddr || '127.0.0.1',
-                );
-            }
-
-            return responseDto;
+            return savedOrder;
         });
     }
 
@@ -135,7 +120,7 @@ export class OrdersService {
         return this.ordersRepo.find({ relations: ['orderItems'], order: { createdAt: 'DESC' } });
     }
 
-    async findAllPaged(page: number = 1, limit: number = 10): Promise<{ data: Order[], total: number, page: number, limit: number }> {
+    async findAllPaged(page: number = 1, limit: number = 10): Promise<PaginatedResponse<Order>> {
         const skip = (page - 1) * limit;
         const [orders, total] = await this.ordersRepo.findAndCount({
             relations: ['orderItems'],
@@ -143,7 +128,7 @@ export class OrdersService {
             skip,
             take: limit,
         });
-        return { data: orders, total, page, limit };
+        return { items: orders, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
 
     async findByUserId(userId: string): Promise<Order[]> {
@@ -219,7 +204,7 @@ export class OrdersService {
     }
 
     /**
-     * Tự động cancel các order PENDING quá hạn thanh toán (gọi từ cron job)
+     * Tự động cancel các order PENDING quá hạn thanh toán 
      */
     async cancelExpiredOrders(): Promise<number> {
         const now = new Date();

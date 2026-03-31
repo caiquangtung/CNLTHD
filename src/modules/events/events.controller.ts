@@ -43,7 +43,7 @@ export class EventsController {
   constructor(
     private readonly eventsService: EventsService,
     private readonly ticketTypesService: TicketTypesService,
-  ) {}
+  ) { }
 
   /** Tương ứng ticket-types: POST /ticket-types */
   @Post()
@@ -70,9 +70,9 @@ export class EventsController {
 
   @Get('my-events')
   async findMyEvents(
-    @CurrentUser() currentUser: { id: string },
+    @CurrentUser('id') currentUser,
   ): Promise<EventResponseDto[]> {
-    const events = await this.eventsService.findByOrganizer(currentUser.id);
+    const events = await this.eventsService.findByOrganizer(currentUser);
     return mapEventsToResponseDto(events);
   }
 

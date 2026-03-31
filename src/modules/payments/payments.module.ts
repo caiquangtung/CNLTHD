@@ -3,7 +3,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Payment } from './entities/payment.entity';
 import { PaymentsService } from './payments.service';
 import { PaymentsController } from './payments.controller';
-import { VnpayGateway, PaymentGatewayFactory } from './gateways';
 import { OrdersModule } from '../orders/orders.module';
 
 @Module({
@@ -13,11 +12,8 @@ import { OrdersModule } from '../orders/orders.module';
     ],
     providers: [
         PaymentsService,
-        // Payment gateways
-        VnpayGateway,
-        PaymentGatewayFactory,
     ],
     controllers: [PaymentsController],
-    exports: [PaymentsService, PaymentGatewayFactory],
+    exports: [PaymentsService],
 })
 export class PaymentsModule { }

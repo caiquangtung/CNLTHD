@@ -31,10 +31,6 @@ export class InitialSchema1770777612121 implements MigrationInterface {
         await queryRunner.query(`CREATE INDEX "idx_events_slug" ON "events" ("slug") `);
         await queryRunner.query(`CREATE INDEX "idx_events_start_time" ON "events" ("start_time") `);
         await queryRunner.query(`CREATE INDEX "idx_events_status" ON "events" ("status") `);
-        await queryRunner.query(`CREATE TYPE "public"."order_reservations_status_enum" AS ENUM('active', 'completed', 'expired', 'cancelled')`);
-        await queryRunner.query(`CREATE TABLE "order_reservations" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'Asia/Ho_Chi_Minh'), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'Asia/Ho_Chi_Minh'), "deleted_at" TIMESTAMP WITH TIME ZONE, "user_id" uuid NOT NULL, "ticket_type_id" uuid NOT NULL, "quantity" integer NOT NULL, "unit_price" numeric(10,2) NOT NULL, "expires_at" TIMESTAMP WITH TIME ZONE NOT NULL, "status" "public"."order_reservations_status_enum" NOT NULL DEFAULT 'active', CONSTRAINT "PK_a6287de76ce42904274b53738f9" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "idx_reservations_status_expires" ON "order_reservations" ("status", "expires_at") `);
-        await queryRunner.query(`CREATE INDEX "idx_reservations_user_ticket" ON "order_reservations" ("user_id", "ticket_type_id") `);
         await queryRunner.query(`CREATE TABLE "ticket_types" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'Asia/Ho_Chi_Minh'), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'Asia/Ho_Chi_Minh'), "deleted_at" TIMESTAMP WITH TIME ZONE, "event_id" uuid NOT NULL, "name" character varying NOT NULL, "description" text NOT NULL, "price" numeric(10,2) NOT NULL, "quantity" integer NOT NULL, "max_per_order" integer NOT NULL DEFAULT '10', CONSTRAINT "PK_5510ce7e18a4edc648c9fbfc283" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE INDEX "idx_ticket_types_event_id" ON "ticket_types" ("event_id") `);
         await queryRunner.query(`CREATE TABLE "order_items" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'Asia/Ho_Chi_Minh'), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'Asia/Ho_Chi_Minh'), "deleted_at" TIMESTAMP WITH TIME ZONE, "order_id" uuid NOT NULL, "ticket_type_id" uuid NOT NULL, "quantity" integer NOT NULL, "unit_price" numeric(10,2) NOT NULL, CONSTRAINT "PK_005269d8574e6fac0493715c308" PRIMARY KEY ("id"))`);
@@ -51,8 +47,6 @@ export class InitialSchema1770777612121 implements MigrationInterface {
         await queryRunner.query(`CREATE TABLE "tickets" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'Asia/Ho_Chi_Minh'), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'Asia/Ho_Chi_Minh'), "deleted_at" TIMESTAMP WITH TIME ZONE, "order_id" uuid NOT NULL, "ticket_type_id" uuid NOT NULL, "ticket_code" character varying NOT NULL, "qr_data" text NOT NULL, "status" "public"."tickets_status_enum" NOT NULL DEFAULT 'active', CONSTRAINT "UQ_40e7b62bf74bc61a7d74d682936" UNIQUE ("ticket_code"), CONSTRAINT "PK_343bc942ae261cf7a1377f48fd0" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE INDEX "idx_tickets_order_id" ON "tickets" ("order_id") `);
         await queryRunner.query(`CREATE INDEX "idx_tickets_code" ON "tickets" ("ticket_code") `);
-        await queryRunner.query(`ALTER TABLE "order_reservations" ADD CONSTRAINT "FK_b59347dbb2a954267dd45fa6903" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "order_reservations" ADD CONSTRAINT "FK_265476dabc93c00cb8f959884df" FOREIGN KEY ("ticket_type_id") REFERENCES "ticket_types"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "ticket_types" ADD CONSTRAINT "FK_9dfa62b35548ea1e0b7e4675b20" FOREIGN KEY ("event_id") REFERENCES "events"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "order_items" ADD CONSTRAINT "FK_145532db85752b29c57d2b7b1f1" FOREIGN KEY ("order_id") REFERENCES "orders"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "order_items" ADD CONSTRAINT "FK_41292b9bdd561fb442a064705d7" FOREIGN KEY ("ticket_type_id") REFERENCES "ticket_types"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
@@ -70,8 +64,6 @@ export class InitialSchema1770777612121 implements MigrationInterface {
         await queryRunner.query(`ALTER TABLE "order_items" DROP CONSTRAINT "FK_41292b9bdd561fb442a064705d7"`);
         await queryRunner.query(`ALTER TABLE "order_items" DROP CONSTRAINT "FK_145532db85752b29c57d2b7b1f1"`);
         await queryRunner.query(`ALTER TABLE "ticket_types" DROP CONSTRAINT "FK_9dfa62b35548ea1e0b7e4675b20"`);
-        await queryRunner.query(`ALTER TABLE "order_reservations" DROP CONSTRAINT "FK_265476dabc93c00cb8f959884df"`);
-        await queryRunner.query(`ALTER TABLE "order_reservations" DROP CONSTRAINT "FK_b59347dbb2a954267dd45fa6903"`);
         await queryRunner.query(`DROP INDEX "public"."idx_tickets_code"`);
         await queryRunner.query(`DROP INDEX "public"."idx_tickets_order_id"`);
         await queryRunner.query(`DROP TABLE "tickets"`);
@@ -88,10 +80,6 @@ export class InitialSchema1770777612121 implements MigrationInterface {
         await queryRunner.query(`DROP TABLE "order_items"`);
         await queryRunner.query(`DROP INDEX "public"."idx_ticket_types_event_id"`);
         await queryRunner.query(`DROP TABLE "ticket_types"`);
-        await queryRunner.query(`DROP INDEX "public"."idx_reservations_user_ticket"`);
-        await queryRunner.query(`DROP INDEX "public"."idx_reservations_status_expires"`);
-        await queryRunner.query(`DROP TABLE "order_reservations"`);
-        await queryRunner.query(`DROP TYPE "public"."order_reservations_status_enum"`);
         await queryRunner.query(`DROP INDEX "public"."idx_events_status"`);
         await queryRunner.query(`DROP INDEX "public"."idx_events_start_time"`);
         await queryRunner.query(`DROP INDEX "public"."idx_events_slug"`);

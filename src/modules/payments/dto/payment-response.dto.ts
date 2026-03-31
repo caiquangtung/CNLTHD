@@ -1,62 +1,31 @@
-import { ApiProperty } from '@nestjs/swagger';
 import { PaymentMethod, PaymentStatus } from '../entities/payment.entity';
+import { Exclude, Expose } from 'class-transformer';
 
 export class PaymentResponseDto {
-    @ApiProperty({
-        description: 'Payment ID',
-        example: '550e8400-e29b-41d4-a716-446655440000',
-    })
+    @Expose()
     id: string;
 
-    @ApiProperty({
-        description: 'Order ID',
-        example: '550e8400-e29b-41d4-a716-446655440001',
-    })
+    @Expose()
     orderId: string;
 
-    @ApiProperty({
-        description: 'Payment amount',
-        example: 275.50,
-    })
+    @Expose()
     amount: number;
 
-    @ApiProperty({
-        description: 'Payment method',
-        enum: ['credit_card', 'debit_card', 'bank_transfer', 'e_wallet', 'cash'],
-        example: 'credit_card',
-    })
+    @Expose()
     paymentMethod: PaymentMethod;
 
-    @ApiProperty({
-        description: 'Payment status',
-        enum: ['pending', 'success', 'failed', 'refunded'],
-        example: 'pending',
-    })
+    @Expose()
     status: PaymentStatus;
 
-    @ApiProperty({
-        description: 'Transaction ID',
-        example: 'TXN123456',
-        nullable: true,
-    })
+    @Expose()
     transactionId?: string;
 
-    @ApiProperty({
-        description: 'Payment time',
-        example: '2024-01-15T10:30:00.000Z',
-        nullable: true,
-    })
+    @Expose()
     paymentTime?: Date;
 
-    @ApiProperty({
-        description: 'Created at',
-        example: '2024-01-15T10:30:00.000Z',
-    })
+    @Exclude()
     createdAt: Date;
 
-    @ApiProperty({
-        description: 'Updated at',
-        example: '2024-01-15T10:30:00.000Z',
-    })
+    @Exclude()
     updatedAt: Date;
 }

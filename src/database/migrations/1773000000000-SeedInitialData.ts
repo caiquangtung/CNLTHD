@@ -165,30 +165,9 @@ export class SeedInitialData1773000000000 implements MigrationInterface {
          200000, 200, 3, NOW() - INTERVAL '35 days', NOW() - INTERVAL '2 days')
       ON CONFLICT DO NOTHING
     `);
-
-    // ── ORDER RESERVATIONS (1 reservation đang active) ──
-    await queryRunner.query(`
-      INSERT INTO order_reservations (id, user_id, ticket_type_id, quantity, unit_price, expires_at, status, created_at, updated_at)
-      VALUES
-        (
-         '20000000-0000-0000-0000-000000000001',
-         (SELECT id FROM users WHERE email = 'pham.thi.hoa@gmail.com' LIMIT 1),
-         'c0000000-0000-0000-0000-000000000004',
-         2,
-         299000,
-         NOW() + INTERVAL '10 minutes',
-         'active',
-         NOW() - INTERVAL '5 minutes',
-         NOW() - INTERVAL '5 minutes'
-        )
-      ON CONFLICT DO NOTHING
-    `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `DELETE FROM order_reservations WHERE id = '20000000-0000-0000-0000-000000000001'`,
-    );
     await queryRunner.query(
       `DELETE FROM ticket_types WHERE id IN ('c0000000-0000-0000-0000-000000000001','c0000000-0000-0000-0000-000000000002','c0000000-0000-0000-0000-000000000003','c0000000-0000-0000-0000-000000000004','c0000000-0000-0000-0000-000000000005','c0000000-0000-0000-0000-000000000006','c0000000-0000-0000-0000-000000000007','c0000000-0000-0000-0000-000000000008')`,
     );
