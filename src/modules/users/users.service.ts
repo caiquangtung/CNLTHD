@@ -9,10 +9,11 @@ import {
   applyUpdateUserDtoToEntity,
   mapCreateUserDtoToEntity,
 } from './mappers/user.mapper';
+import { PaginatedResponse } from 'src/common';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectRepository(User) private usersRepo: Repository<User>) {}
+  constructor(@InjectRepository(User) private usersRepo: Repository<User>) { }
 
   /**
    * Create user with hashed password
@@ -26,11 +27,11 @@ export class UsersService {
     }
 
     const user = mapCreateUserDtoToEntity(dto);
-    
+
     // Hash password
     const saltRounds = 10;
     user.passwordHash = await bcrypt.hash(dto.password, saltRounds);
-    
+
     return this.usersRepo.save(user);
   }
 
@@ -122,5 +123,15 @@ export class UsersService {
    */
   async remove(id: string): Promise<void> {
     await this.softRemove(id);
+  }
+
+  async findAllPaged(page: number = 1, limit: number = 10): Promise<PaginatedResponse<User>> {
+    const skip = (page - 1) * limit;
+    const [users, total] = await this.usersRepo.findAndCount({
+      order: { createdAt: 'DESC' },
+      skip,
+      take: limit,
+    });
+    return { items: users, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 }
