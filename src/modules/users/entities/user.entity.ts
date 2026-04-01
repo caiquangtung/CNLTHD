@@ -17,6 +17,9 @@ export class User extends BaseEntity {
   @Column({ name: 'password_hash' })
   passwordHash: string;
 
+  @Column({ name: 'refresh_token_hash', nullable: true })
+  refreshTokenHash: string | null;
+
   @Column({ name: 'full_name' })
   fullName: string;
 

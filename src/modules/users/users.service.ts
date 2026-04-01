@@ -13,7 +13,7 @@ import { PaginatedResponse } from 'src/common';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectRepository(User) private usersRepo: Repository<User>) { }
+  constructor(@InjectRepository(User) private usersRepo: Repository<User>) {}
 
   /**
    * Create user with hashed password
@@ -54,6 +54,15 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
     return user;
+  }
+
+  async updateRefreshTokenHash(
+    userId: string,
+    refreshTokenHash: string | null,
+  ): Promise<void> {
+    const user = await this.findById(userId);
+    user.refreshTokenHash = refreshTokenHash;
+    await this.usersRepo.save(user);
   }
 
   async update(id: string, dto: UpdateUserDto): Promise<User> {
