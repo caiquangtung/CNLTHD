@@ -14,6 +14,7 @@ import { Repository } from 'typeorm';
 import { Event } from './entities/event.entity';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
+import { PaginatedResponse } from 'src/common';
 import {
   mapCreateEventDtoToEntity,
   applyUpdateEventDtoToEntity,
@@ -50,6 +51,27 @@ export class EventsService {
       where: { deletedAt: null },
       order: { startTime: 'ASC' },
     });
+  }
+
+  async findAllPaged(
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<PaginatedResponse<Event>> {
+    const skip = (page - 1) * limit;
+    const [events, total] = await this.eventsRepo.findAndCount({
+      where: { deletedAt: null },
+      order: { startTime: 'ASC' },
+      skip,
+      take: limit,
+    });
+
+    return {
+      items: events,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   /** Tương ứng ticket-types.service: findByEvent() (events lọc theo organizerId) */

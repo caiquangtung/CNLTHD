@@ -14,6 +14,8 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  Query,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -36,6 +38,7 @@ import {
   mapTicketTypeToResponseDto,
   mapTicketTypesToResponseDto,
 } from '../ticket-types/mappers/ticket-type.mapper';
+import { PaginatedResponse } from 'src/common';
 
 @Controller('events')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -43,7 +46,7 @@ export class EventsController {
   constructor(
     private readonly eventsService: EventsService,
     private readonly ticketTypesService: TicketTypesService,
-  ) { }
+  ) {}
 
   /** Tương ứng ticket-types: POST /ticket-types */
   @Post()
@@ -63,14 +66,25 @@ export class EventsController {
   /** Tương ứng ticket-types: GET /ticket-types */
   @Get()
   @Public()
-  async findAll(): Promise<EventResponseDto[]> {
-    const events = await this.eventsService.findAll();
-    return mapEventsToResponseDto(events);
+  async findAll(
+    @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
+  ): Promise<PaginatedResponse<EventResponseDto>> {
+    const result = await this.eventsService.findAllPaged(page, limit);
+    const data = mapEventsToResponseDto(result.items);
+
+    return {
+      items: data,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
+    };
   }
 
   @Get('my-events')
   async findMyEvents(
-    @CurrentUser('id') currentUser,
+    @CurrentUser('id') currentUser: string,
   ): Promise<EventResponseDto[]> {
     const events = await this.eventsService.findByOrganizer(currentUser);
     return mapEventsToResponseDto(events);
