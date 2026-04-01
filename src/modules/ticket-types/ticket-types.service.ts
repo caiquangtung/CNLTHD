@@ -9,6 +9,7 @@ import { Repository } from 'typeorm';
 import { TicketType } from './entities/ticket-type.entity';
 import { CreateTicketTypeDto } from './dto/create-ticket-type.dto';
 import { UpdateTicketTypeDto } from './dto/update-ticket-type.dto';
+import { PaginatedResponse } from 'src/common';
 import {
   mapCreateTicketTypeDtoToEntity,
   applyUpdateTicketTypeDtoToEntity,
@@ -40,6 +41,27 @@ export class TicketTypesService {
       where: { deletedAt: null },
       order: { createdAt: 'ASC' },
     });
+  }
+
+  async findAllPaged(
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<PaginatedResponse<TicketType>> {
+    const skip = (page - 1) * limit;
+    const [ticketTypes, total] = await this.ticketTypesRepo.findAndCount({
+      where: { deletedAt: null },
+      order: { createdAt: 'ASC' },
+      skip,
+      take: limit,
+    });
+
+    return {
+      items: ticketTypes,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findByEvent(eventId: string): Promise<TicketType[]> {
