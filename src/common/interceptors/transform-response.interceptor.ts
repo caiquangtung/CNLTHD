@@ -9,70 +9,10 @@ import { map } from 'rxjs/operators';
 import { ApiResponse } from '../interfaces/api-response.interface';
 
 /**
- * Interceptor chuẩn hóa phản hồi HTTP.
- *
- * - Bọc mọi dữ liệu trả về của controller (events, ticket-types, users,...)
- *   vào cùng một cấu trúc `ApiResponse<T>`.
- * - Đồng thời chuẩn hóa toàn bộ thời gian về múi giờ Việt Nam (+07:00).
+ * Static helper để format timestamp
  */
-@Injectable()
-export class TransformResponseInterceptor<T>
-  implements NestInterceptor<T, ApiResponse<T>> {
-  intercept(
-    context: ExecutionContext,
-    next: CallHandler,
-  ): Observable<ApiResponse<T>> {
-    const ctx = context.switchToHttp();
-    const request = ctx.getRequest<Request>();
-    const response = ctx.getResponse();
-
-    return next.handle().pipe(
-      map((data) => {
-        // Chuẩn hóa toàn bộ thời gian trong dữ liệu về múi giờ +07:00
-        const formattedData = this.formatTimestamps(data);
-
-        return {
-          success: true,
-          data: formattedData || null,
-          message: null,
-          statusCode: response.statusCode,
-          timestamp: this.formatDateWithTimezone(new Date()),
-          path: request.url,
-        };
-      }),
-    );
-  }
-
-  /** Duyệt đệ quy và format mọi trường có kiểu Date. */
-  private formatTimestamps(obj: any): any {
-    if (!obj) return obj;
-
-    if (obj instanceof Date) {
-      return this.formatDateWithTimezone(obj);
-    }
-
-    if (Array.isArray(obj)) {
-      return obj.map((item) => this.formatTimestamps(item));
-    }
-
-    if (typeof obj === 'object' && obj !== null) {
-      const formatted = {};
-      for (const key in obj) {
-        if (obj.hasOwnProperty(key)) {
-          formatted[key] = this.formatTimestamps(obj[key]);
-        }
-      }
-      return formatted;
-    }
-
-    return obj;
-  }
-
-  /**
-   * Chuyển đối tượng Date sang chuỗi theo múi giờ Việt Nam (+07:00).
-   * Ví dụ: "2026-03-10 15:30:00+07:00".
-   */
-  private formatDateWithTimezone(date: Date): string {
+export class DateFormatterHelper {
+  static formatDateWithTimezone(date: Date): string {
     const vietnamFormatter = new Intl.DateTimeFormat('vi-VN', {
       year: 'numeric',
       month: '2-digit',
@@ -92,5 +32,61 @@ export class TransformResponseInterceptor<T>
     const second = parts.find((p) => p.type === 'second')?.value;
 
     return `${year}-${month}-${day} ${hour}:${minute}:${second}+07:00`;
+  }
+
+  static formatDatesDeep<T>(value: T): T {
+    if (value === null || value === undefined) {
+      return value;
+    }
+
+    if (value instanceof Date) {
+      return DateFormatterHelper.formatDateWithTimezone(value) as T;
+    }
+
+    if (Array.isArray(value)) {
+      return value.map((item) => DateFormatterHelper.formatDatesDeep(item)) as T;
+    }
+
+    if (typeof value === 'object') {
+      const formatted: Record<string, unknown> = {};
+      for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+        formatted[key] = DateFormatterHelper.formatDatesDeep(item);
+      }
+      return formatted as T;
+    }
+
+    return value;
+  }
+}
+
+/**
+ * Interceptor chuẩn hóa phản hồi HTTP.
+ *
+ * - Bọc mọi dữ liệu trả về của controller vào cùng một cấu trúc `ApiResponse<T>`.
+ * - Format timestamp trong response metadata về múi giờ Việt Nam (+07:00).
+ */
+@Injectable()
+export class TransformResponseInterceptor<T>
+  implements NestInterceptor<T, ApiResponse<T>> {
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler,
+  ): Observable<ApiResponse<T>> {
+    const ctx = context.switchToHttp();
+    const request = ctx.getRequest<Request>();
+    const response = ctx.getResponse();
+
+    return next.handle().pipe(
+      map((data) => {
+        return {
+          success: true,
+          data: data ? DateFormatterHelper.formatDatesDeep(data) : null,
+          message: null,
+          statusCode: response.statusCode,
+          timestamp: DateFormatterHelper.formatDateWithTimezone(new Date()),
+          path: request.url,
+        };
+      }),
+    );
   }
 }
