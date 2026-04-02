@@ -10,6 +10,8 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  Query,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { TicketTypesService } from './ticket-types.service';
 import { CreateTicketTypeDto } from './dto/create-ticket-type.dto';
@@ -24,6 +26,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { UserRole } from '../users/entities/user.entity';
+import { PaginatedResponse } from 'src/common';
 
 @Controller('ticket-types')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -43,9 +46,25 @@ export class TicketTypesController {
 
   @Get()
   @Public()
-  async findAll(): Promise<TicketTypeResponseDto[]> {
+  async findAll(
+    @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
+  ): Promise<PaginatedResponse<TicketTypeResponseDto>> {
     const ticketTypes = await this.ticketTypesService.findAll();
-    return mapTicketTypesToResponseDto(ticketTypes);
+    const total = ticketTypes.length;
+    const safePage = page > 0 ? page : 1;
+    const safeLimit = limit > 0 ? limit : 10;
+    const skip = (safePage - 1) * safeLimit;
+    const pagedItems = ticketTypes.slice(skip, skip + safeLimit);
+    const data = mapTicketTypesToResponseDto(pagedItems);
+
+    return {
+      items: data,
+      total,
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.ceil(total / safeLimit),
+    };
   }
 
   @Get('deleted')
