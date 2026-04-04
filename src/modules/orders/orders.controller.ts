@@ -39,7 +39,7 @@ import { PaginatedResponse } from 'src/common';
 import { mapTicketTypesToResponseDto } from '../ticket-types/mappers/ticket-type.mapper';
 
 @Controller('orders')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class OrdersController {
     constructor(
         private readonly ordersService: OrdersService
@@ -55,7 +55,6 @@ export class OrdersController {
     }
 
     @Get()
-    @UseGuards(RolesGuard)
     @Roles(UserRole.ADMIN)
     async findAll(
         @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
@@ -82,7 +81,6 @@ export class OrdersController {
     }
 
     @Get(':id')
-    @UseGuards(RolesGuard)
     @Roles(UserRole.ADMIN)
     async findOne(
         @Param('id', new ParseUUIDPipe()) id: string,

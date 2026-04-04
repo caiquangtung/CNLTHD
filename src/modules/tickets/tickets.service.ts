@@ -20,7 +20,7 @@ export class TicketsService {
   constructor(
     @InjectRepository(Ticket)
     private readonly ticketsRepo: Repository<Ticket>,
-  ) {}
+  ) { }
 
   async create(dto: CreateTicketDto): Promise<Ticket> {
     const existing = await this.ticketsRepo.findOne({
@@ -55,14 +55,6 @@ export class TicketsService {
     });
   }
 
-  async findByUser(userId: string): Promise<Ticket[]> {
-    return this.ticketsRepo
-      .createQueryBuilder('ticket')
-      .innerJoinAndSelect('ticket.order', 'order')
-      .where('order.user_id = :userId', { userId })
-      .orderBy('ticket.created_at', 'ASC')
-      .getMany();
-  }
 
   async findById(id: string): Promise<Ticket> {
     const ticket = await this.ticketsRepo.findOne({ where: { id } });

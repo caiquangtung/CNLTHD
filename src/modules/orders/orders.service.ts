@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, LessThan, EntityManager } from 'typeorm';
+import { Repository, DataSource, LessThan, EntityManager, MoreThanOrEqual } from 'typeorm';
 import { Order, OrderStatus } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -69,16 +69,15 @@ export class OrdersService {
                     throw new BadRequestException(`Vé ${ticketType.name} chỉ được mua tối đa ${ticketType.maxPerOrder} vé mỗi đơn hàng`);
                 }
 
-                // Trừ kho theo kiểu atomic để tránh race condition gây oversell.
-                const decrementResult = await manager
-                    .createQueryBuilder()
-                    .update(TicketType)
-                    .set({
-                        quantity: () => `quantity - ${item.quantity}`,
-                    })
-                    .where('id = :ticketTypeId', { ticketTypeId: item.ticketTypeId })
-                    .andWhere('quantity >= :requestedQty', { requestedQty: item.quantity })
-                    .execute();
+                const decrementResult = await manager.decrement(
+                    TicketType,
+                    {
+                        id: item.ticketTypeId,
+                        quantity: MoreThanOrEqual(item.quantity),
+                    },
+                    'quantity',
+                    item.quantity,
+                );
 
                 if (!decrementResult.affected) {
                     throw new BadRequestException(`Vé ${ticketType.name} không đủ số lượng`);
@@ -133,7 +132,9 @@ export class OrdersService {
 
     async findByUserId(userId: string): Promise<Order[]> {
         return this.ordersRepo.find({
-            where: { userId },
+            where: {
+                userId: userId
+            },
             relations: ['orderItems'],
             order: { createdAt: 'DESC' },
         });
@@ -233,7 +234,7 @@ export class OrdersService {
                 cancelledCount++;
                 this.logger.warn(`Tự động hủy đơn hàng ${order.id}`);
             } catch (error) {
-                this.logger.error(`Lỗi hủy đơn hàng ${order.id}: ${error.message}`);
+                this.logger.error(`Lỗi hủy đơn hàng ${order.id}`);
             }
         }
 
