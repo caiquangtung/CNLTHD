@@ -12,7 +12,6 @@ import { TicketTypesModule } from './modules/ticket-types/ticket-types.module';
 import { EventsModule } from './modules/events/events.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { PaymentsModule } from './modules/payments/payments.module';
-import { BookingsModule } from './modules/bookings/bookings.module';
 import { OrderCronService } from './cron/order-cron.service';
 
 @Module({
@@ -41,7 +40,6 @@ import { OrderCronService } from './cron/order-cron.service';
     EventsModule,
     OrdersModule,
     PaymentsModule,
-    BookingsModule,
   ],
   controllers: [AppController],
   providers: [

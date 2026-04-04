@@ -26,7 +26,7 @@ import { UserRole } from '../users/entities/user.entity';
 @Controller('tickets')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class TicketsController {
-  constructor(private readonly ticketsService: TicketsService) {}
+  constructor(private readonly ticketsService: TicketsService) { }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -47,14 +47,6 @@ export class TicketsController {
   @Roles(UserRole.ADMIN)
   async findAllWithDeleted(): Promise<TicketResponseDto[]> {
     const tickets = await this.ticketsService.findAllWithDeleted();
-    return mapTicketsToResponseDto(tickets);
-  }
-
-  @Get('me')
-  async findMyTickets(
-    @CurrentUser() user: { id: string },
-  ): Promise<TicketResponseDto[]> {
-    const tickets = await this.ticketsService.findByUser(user.id);
     return mapTicketsToResponseDto(tickets);
   }
 
