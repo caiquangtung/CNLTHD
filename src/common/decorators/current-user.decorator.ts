@@ -1,4 +1,4 @@
-import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+import { createParamDecorator, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 
 /**
  * Decorator `@CurrentUser()` lấy thông tin người dùng từ request.
@@ -11,9 +11,17 @@ export const CurrentUser = createParamDecorator(
     const request = ctx.switchToHttp().getRequest();
     const user = request.user;
 
+    if (!user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
     // Nếu truyền key (ví dụ: @CurrentUser('id')) thì trả về đúng trường đó
     if (data) {
-      return user?.[data];
+      const value = user[data];
+      if (value === undefined || value === null) {
+        throw new UnauthorizedException(`User ${data} not found`);
+      }
+      return value;
     }
 
     // Nếu không truyền gì thì trả về toàn bộ đối tượng user
