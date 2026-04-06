@@ -39,8 +39,7 @@ export class Payment extends BaseEntity {
   })
   status: PaymentStatus;
 
-  @Index('idx_payments_transaction_id')
-  @Column({ name: 'transaction_id', unique: true, nullable: true })
+  @Column({ name: 'transaction_id', nullable: true })
   transactionId: string;
 
   @Column({ name: 'payment_time', type: 'timestamp', nullable: true })

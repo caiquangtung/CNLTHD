@@ -58,8 +58,10 @@ export class OrdersService {
             let totalAmount = 0;
 
             for (const item of order.orderItems) {
+                // LOCK TicketType để tránh race condition khi trừ số lượng
                 const ticketType = await manager.findOne(TicketType, {
                     where: { id: item.ticketTypeId },
+                    lock: { mode: 'pessimistic_write' }
                 });
 
                 if (!ticketType) throw new NotFoundException(`Loại vé không tồn tại`);
@@ -68,19 +70,13 @@ export class OrdersService {
                     throw new BadRequestException(`Vé ${ticketType.name} chỉ được mua tối đa ${ticketType.maxPerOrder} vé mỗi đơn hàng`);
                 }
 
-                const decrementResult = await manager.decrement(
-                    TicketType,
-                    {
-                        id: item.ticketTypeId,
-                        quantity: MoreThanOrEqual(item.quantity),
-                    },
-                    'quantity',
-                    item.quantity,
-                );
-
-                if (!decrementResult.affected) {
+                if (ticketType.quantity < item.quantity) {
                     throw new BadRequestException(`Vé ${ticketType.name} không đủ số lượng`);
                 }
+
+                // Trừ tay sau khi đã lock
+                ticketType.quantity -= item.quantity;
+                await manager.save(ticketType);
 
                 item.unitPrice = ticketType.price;
                 totalAmount += Number(ticketType.price) * item.quantity;
@@ -88,8 +84,6 @@ export class OrdersService {
 
             order.totalAmount = totalAmount;
 
-            // Xử lý đặc biệt cho phương thức CASH
-            const timestamp = Date.now();
             if (dto.paymentMethod === 'cash') {
                 order.status = OrderStatus.PAID;
                 order.paymentDeadline = new Date(Date.now() + this.paymentDeadlineMinutes * 60 * 1000);;
@@ -97,7 +91,7 @@ export class OrdersService {
                     amount: totalAmount,
                     status: PaymentStatus.SUCCESS,
                     paymentMethod: dto.paymentMethod,
-                    transactionId: `CASH-MOCK-${order.id}-${timestamp}`,
+                    transactionId: `CASH-MOCK`,
                 });
             } else if (dto.paymentMethod === 'bank_transfer') {
                 order.status = OrderStatus.PENDING;
@@ -106,7 +100,7 @@ export class OrdersService {
                     amount: totalAmount,
                     status: PaymentStatus.PENDING,
                     paymentMethod: dto.paymentMethod,
-                    transactionId: `BANK-TRANSFER-MOCK-${order.id}-${timestamp}`,
+                    transactionId: `BANK-TRANSFER-MOCK`,
                 });
             }
 
@@ -193,15 +187,18 @@ export class OrdersService {
      * Hoàn kho cho các order items
      */
     private async restoreInventory(manager: EntityManager, items: OrderItem[]): Promise<void> {
-        const promises = items.map(item =>
-            manager.increment(
-                TicketType,
-                { id: item.ticketTypeId },
-                'quantity',
-                item.quantity
-            )
-        );
-        await Promise.all(promises);
+        for (const item of items) {
+            // LOCK TicketType trước
+            const ticketType = await manager.findOne(TicketType, {
+                where: { id: item.ticketTypeId },
+                lock: { mode: 'pessimistic_write' }
+            });
+
+            if (ticketType) {
+                ticketType.quantity += item.quantity;
+                await manager.save(ticketType);
+            }
+        }
     }
 
     /**

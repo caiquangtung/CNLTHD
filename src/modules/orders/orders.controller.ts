@@ -39,7 +39,7 @@ import { PaginatedResponse } from 'src/common';
 import { mapTicketTypesToResponseDto } from '../ticket-types/mappers/ticket-type.mapper';
 
 @Controller('orders')
-// @UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class OrdersController {
     constructor(
         private readonly ordersService: OrdersService
