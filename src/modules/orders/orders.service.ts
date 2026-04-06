@@ -16,7 +16,6 @@ import {
 } from './mappers/order.mapper';
 import { TicketType } from '../ticket-types/entities';
 import { Payment, PaymentStatus } from '../payments/entities';
-import { Ticket } from '../tickets/entities/ticket.entity';
 import { PaginatedResponse } from 'src/common';
 
 const MAX_PENDING_ORDERS = 2;
@@ -90,6 +89,7 @@ export class OrdersService {
             order.totalAmount = totalAmount;
 
             // Xử lý đặc biệt cho phương thức CASH
+            const timestamp = Date.now();
             if (dto.paymentMethod === 'cash') {
                 order.status = OrderStatus.PAID;
                 order.paymentDeadline = new Date(Date.now() + this.paymentDeadlineMinutes * 60 * 1000);;
@@ -97,7 +97,7 @@ export class OrdersService {
                     amount: totalAmount,
                     status: PaymentStatus.SUCCESS,
                     paymentMethod: dto.paymentMethod,
-                    transactionId: 'CASH-MOCK',
+                    transactionId: `CASH-MOCK-${order.id}-${timestamp}`,
                 });
             } else if (dto.paymentMethod === 'bank_transfer') {
                 order.status = OrderStatus.PENDING;
@@ -106,7 +106,7 @@ export class OrdersService {
                     amount: totalAmount,
                     status: PaymentStatus.PENDING,
                     paymentMethod: dto.paymentMethod,
-                    transactionId: "BANK-TRANSFER-MOCK",
+                    transactionId: `BANK-TRANSFER-MOCK-${order.id}-${timestamp}`,
                 });
             }
 
