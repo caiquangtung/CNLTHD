@@ -48,6 +48,11 @@ export class PaymentsService {
                 throw new ForbiddenException('Bạn không có quyền hoàn thành thanh toán của đơn hàng này');
             }
 
+            const now = new Date();
+            if (order.paymentDeadline < now) {
+                throw new BadRequestException('Thời hạn thanh toán đã hết, không thể hoàn thành thanh toán');
+            }
+
             if (payment.status !== PaymentStatus.PENDING) {
                 throw new BadRequestException(
                     `Hóa đơn đã được ${payment.status}, không thể hoàn thành`,
