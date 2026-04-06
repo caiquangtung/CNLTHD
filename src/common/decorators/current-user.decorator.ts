@@ -11,13 +11,9 @@ export const CurrentUser = createParamDecorator(
     const request = ctx.switchToHttp().getRequest();
     const user = request.user;
 
-    if (!user) {
-      throw new UnauthorizedException('User not authenticated');
-    }
-
     // Nếu truyền key (ví dụ: @CurrentUser('id')) thì trả về đúng trường đó
     if (data) {
-      const value = user[data];
+      const value = user?.[data];
       if (value === undefined || value === null) {
         throw new UnauthorizedException(`User ${data} not found`);
       }
