@@ -1,7 +1,3 @@
-/**
- * Controller Events – API /events.
- * Tương ứng: ticket-types/ticket-types.controller.ts (route /ticket-types)
- */
 import {
   Controller,
   Get,
