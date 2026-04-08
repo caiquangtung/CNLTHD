@@ -1,6 +1,6 @@
 import { Expose } from 'class-transformer';
 
-export class OrderItemResponseDto {
+export class BookingItemResponseDto {
   @Expose()
   id: string;
 

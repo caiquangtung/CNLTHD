@@ -1,8 +1,8 @@
 import { Exclude, Expose, Type } from 'class-transformer';
-import { OrderStatus } from '../entities/order.entity';
-import { OrderItemResponseDto } from './order-item-response.dto';
+import { OrderStatus } from '../../orders/entities/order.entity';
+import { BookingItemResponseDto } from './booking-item-response.dto';
 
-export class OrderResponseDto {
+export class BookingResponseDto {
   @Expose()
   id: string;
 
@@ -16,8 +16,8 @@ export class OrderResponseDto {
   status: OrderStatus;
 
   @Expose()
-  @Type(() => OrderItemResponseDto)
-  orderItems: OrderItemResponseDto[];
+  @Type(() => BookingItemResponseDto)
+  orderItems: BookingItemResponseDto[];
 
   @Exclude()
   createdAt: Date;
