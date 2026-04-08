@@ -11,6 +11,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { TicketTypesModule } from './modules/ticket-types/ticket-types.module';
 import { EventsModule } from './modules/events/events.module';
 import { OrdersModule } from './modules/orders/orders.module';
+import { BookingModule } from './modules/booking/booking.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { OrderCronService } from './cron/order-cron.service';
 import { TicketsModule } from './modules/tickets/tickets.module';
@@ -40,13 +41,11 @@ import { TicketsModule } from './modules/tickets/tickets.module';
     TicketTypesModule,
     EventsModule,
     OrdersModule,
+    BookingModule,
     PaymentsModule,
     TicketsModule,
   ],
   controllers: [AppController],
-  providers: [
-    AppService,
-    OrderCronService,
-  ],
+  providers: [AppService, OrderCronService],
 })
-export class AppModule { }
+export class AppModule {}
