@@ -14,6 +14,7 @@ import { OrdersModule } from './modules/orders/orders.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { OrderCronService } from './cron/order-cron.service';
+import { TicketsModule } from './modules/tickets/tickets.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { OrderCronService } from './cron/order-cron.service';
     OrdersModule,
     PaymentsModule,
     BookingsModule,
+    TicketsModule,
   ],
   controllers: [AppController],
   providers: [
